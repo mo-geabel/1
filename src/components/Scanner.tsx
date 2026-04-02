@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, Suspense } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Camera, MapPin, Loader2, CheckCircle2, 
@@ -31,7 +31,7 @@ function ScannerContent() {
     phone: '',
   });
 
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
 
   const fetchLocation = () => {
     if (typeof window === 'undefined') return;
@@ -115,28 +115,41 @@ function ScannerContent() {
     if (!element || status !== 'scanning' || scannerRef.current) return;
 
     try {
-      const scanner = new Html5QrcodeScanner(
-        element.id,
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        false
-      );
+      const scanner = new Html5Qrcode(element.id);
+      
+      const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0
+      };
 
-      scanner.render((decodedText) => {
-        try {
-          let token = decodedText;
-          if (decodedText.startsWith('http')) {
-            const url = new URL(decodedText);
-            token = url.searchParams.get('token') || decodedText;
+      scanner.start(
+        { facingMode: "environment" },
+        config,
+        (decodedText) => {
+          try {
+            let token = decodedText;
+            if (decodedText.startsWith('http')) {
+              const url = new URL(decodedText);
+              token = url.searchParams.get('token') || decodedText;
+            }
+            scanner.stop().then(() => {
+              scannerRef.current = null;
+              setActiveToken(token);
+              handleVerify(token);
+            }).catch(console.error);
+          } catch (e) {
+            console.error('Invalid QR code');
           }
-          scanner.clear().then(() => {
-            scannerRef.current = null;
-            setActiveToken(token);
-            handleVerify(token);
-          }).catch(console.error);
-        } catch (e) {
-          console.error('Invalid QR code');
+        },
+        (errorMessage) => {
+          // Silent during active scanning
         }
-      }, (errorMessage) => {});
+      ).catch((err) => {
+        console.error('Camera start error:', err);
+        setError('Camera blocked. Please check your browser permissions and ensure you are using HTTPS.');
+        setStatus('error');
+      });
       
       scannerRef.current = scanner;
     } catch (err) {
@@ -147,7 +160,12 @@ function ScannerContent() {
   useEffect(() => {
     return () => {
       if (scannerRef.current) {
-        scannerRef.current.clear().catch(console.error);
+        const scanner = scannerRef.current as Html5Qrcode;
+        if (scanner.isScanning) {
+          scanner.stop().then(() => {
+            scanner.clear();
+          }).catch(console.error);
+        }
         scannerRef.current = null;
       }
     };
@@ -352,7 +370,7 @@ function ScannerContent() {
               ref={initScannerRef}
               className="w-full overflow-hidden" 
             />
-            <div className="absolute inset-0 pointer-events-none border-[20px] border-background/80" />
+            <div className="absolute inset-0 pointer-events-none border-20 border-background/80" />
             
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] border-4 border-blue-500 rounded-3xl pointer-events-none">
               <div className="absolute top-0 left-0 w-full h-[2px] bg-blue-400 animate-scan shadow-[0_0_15px_rgba(59,130,246,0.8)]" />
