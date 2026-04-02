@@ -1,0 +1,157 @@
+'use client';
+
+import { useState, useRef } from 'react';
+import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Download, Table } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { importParticipantsAction } from '@/actions/participants';
+import { toast } from 'react-hot-toast';
+
+interface ParticipantUploadProps {
+  eventId: string;
+}
+
+export default function ParticipantUpload({ eventId }: ParticipantUploadProps) {
+  const [loading, setLoading] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const processFile = async () => {
+    if (!file) return;
+
+    setLoading(true);
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(sheet) as any[];
+
+        // Expected columns: Name, Surname, Email, Phone
+        // Normalizing keys to lowercase for flexible matching
+        const formattedData = json.map(row => {
+          const keys = Object.keys(row);
+          const getVal = (possibleKeys: string[]) => {
+            const key = keys.find(k => possibleKeys.includes(k.toLowerCase().trim()));
+            return key ? row[key] : '';
+          };
+
+          return {
+            name: getVal(['name', 'first name', 'firstname', 'ad']),
+            surname: getVal(['surname', 'last name', 'lastname', 'soyad']),
+            email: getVal(['email', 'e-mail', 'mail']),
+            phone: getVal(['phone', 'tel', 'telefon', 'mobile']).toString(),
+          };
+        }).filter(p => p.email); // Must have email
+
+        if (formattedData.length === 0) {
+          toast.error('No valid participants found. Ensure your file has an "Email" column.');
+          setLoading(false);
+          return;
+        }
+
+        const result = await importParticipantsAction(eventId, formattedData);
+        
+        if (result.success) {
+          toast.success(`Successfully imported ${result.count} participants!`);
+          setFile(null);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        } else {
+          toast.error(result.error || 'Failed to import participants.');
+        }
+      } catch (err) {
+        console.error('File parsing error:', err);
+        toast.error('Error reading file. Please use a valid Excel or CSV file.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    reader.readAsBinaryString(file);
+  };
+
+  const downloadTemplate = () => {
+    const ws = XLSX.utils.json_to_sheet([
+      { Name: 'John', Surname: 'Doe', Email: 'john@example.com', Phone: '1234567890' },
+      { Name: 'Jane', Surname: 'Smith', Email: 'jane@example.com', Phone: '0987654321' }
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Template');
+    XLSX.writeFile(wb, 'participant_template.xlsx');
+  };
+
+  return (
+    <div className="bg-card-bg/40 border border-border-color rounded-[2.5rem] p-8 shadow-sm">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-blue-500/10 rounded-2xl border border-blue-500/10 text-blue-500">
+            <Table className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold">Pre-register Participants</h3>
+            <p className="text-gray-500 text-sm font-medium">Upload Excel/CSV to enroll participants before the event.</p>
+          </div>
+        </div>
+        <button 
+          onClick={downloadTemplate}
+          className="flex items-center gap-2 text-xs font-bold text-blue-500 hover:text-blue-400 transition-colors uppercase tracking-widest bg-blue-500/5 px-4 py-2 rounded-xl border border-blue-500/10"
+        >
+          <Download className="w-4 h-4" />
+          Download Template
+        </button>
+      </div>
+
+      <div className="flex flex-col sm:flex-row items-stretch gap-4">
+        <div 
+          className={`flex-1 relative border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-6 transition-all cursor-pointer ${file ? 'border-blue-500/50 bg-blue-500/5' : 'border-border-color hover:border-gray-400'}`}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <input 
+            type="file" 
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept=".xlsx, .xls, .csv"
+            className="hidden"
+          />
+          {file ? (
+            <div className="flex items-center gap-3">
+              <FileText className="w-8 h-8 text-blue-500" />
+              <div className="text-left">
+                <p className="text-sm font-bold truncate max-w-[200px]">{file.name}</p>
+                <p className="text-[10px] text-gray-500 uppercase font-black">{(file.size / 1024).toFixed(1)} KB</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <Upload className="w-8 h-8 text-gray-300" />
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest text-center">Click to browse or Drag & Drop</p>
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={processFile}
+          disabled={!file || loading}
+          className="sm:w-48 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 text-white font-bold rounded-2xl transition-all shadow-lg shadow-blue-600/10 flex items-center justify-center gap-3 active:scale-[0.98]"
+        >
+          {loading ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <>
+              <CheckCircle className="w-5 h-5" />
+              Import Now
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}

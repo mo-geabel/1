@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp, doublePrecision, integer, boolean, pgEnum, uuid } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
-export const attendanceStatusEnum = pgEnum('attendance_status', ['VALID', 'INVALID_LOCATION', 'EXPIRED_QR']);
+export const attendanceStatusEnum = pgEnum('attendance_status', ['VALID', 'INVALID_LOCATION', 'EXPIRED_QR', 'ABSENT', 'EXTRA']);
 export const userRoleEnum = pgEnum('user_role', ['ADMIN', 'PARTICIPANT']);
 
 export const users = pgTable('users', {

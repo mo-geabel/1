@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
-import { Search, Download, CheckCircle2, XCircle, MapPin, Loader2, Calendar, FileSpreadsheet } from 'lucide-react';
+import { Search, Download, CheckCircle2, XCircle, MapPin, Loader2, Calendar, FileSpreadsheet, Users, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AttendanceList({ initialRecords, eventTitle }: { initialRecords: any[], eventTitle: string }) {
@@ -95,38 +95,65 @@ export default function AttendanceList({ initialRecords, eventTitle }: { initial
                     </div>
                   </td>
                   <td className="px-8 py-6">
-                    {record.status === 'VALID' ? (
-                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-500/10 text-green-500 border border-green-500/20 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        VALID
-                      </div>
+                    {record.id ? (
+                      record.status === 'VALID' ? (
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-500/10 text-green-500 border border-green-500/20 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          VALID
+                        </div>
+                      ) : record.status === 'EXTRA' ? (
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                          <Users className="w-3.5 h-3.5" />
+                          EXTRA
+                        </div>
+                      ) : record.status === 'ABSENT' ? (
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-gray-500/10 text-gray-500 border border-gray-500/20 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                          <XCircle className="w-3.5 h-3.5" />
+                          ABSENT
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-500/10 text-red-500 border border-red-500/20 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          {record.status}
+                        </div>
+                      )
                     ) : (
-                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-500/10 text-red-500 border border-red-500/20 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                        <XCircle className="w-3.5 h-3.5" />
-                        INVALID
+                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        PENDING
                       </div>
                     )}
                   </td>
                   <td className="px-8 py-6">
                     {record.participant.isRegistered ? (
-                      <span className="text-[10px] font-bold text-blue-500 bg-blue-500/5 px-2.5 py-1 rounded-lg border border-blue-500/10 uppercase tracking-widest">Pre-Reg</span>
+                      <span className="text-[10px] font-bold text-indigo-500 bg-indigo-500/5 px-2.5 py-1 rounded-lg border border-indigo-500/10 uppercase tracking-widest">Pre-Reg</span>
                     ) : (
-                      <span className="text-[10px] font-bold text-orange-500 bg-orange-500/5 px-2.5 py-1 rounded-lg border border-orange-500/10 uppercase tracking-widest">Walk-in</span>
+                      <span className="text-[10px] font-bold text-amber-500 bg-amber-500/5 px-2.5 py-1 rounded-lg border border-amber-500/10 uppercase tracking-widest">Walk-in</span>
                     )}
                   </td>
                   <td className="px-8 py-6">
-                    <div className="text-sm font-semibold text-foreground/80">
-                      {new Date(record.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                    <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-1">
-                      {new Date(record.timestamp).toLocaleDateString()}
-                    </div>
+                    {record.timestamp ? (
+                      <>
+                        <div className="text-sm font-semibold text-foreground/80">
+                          {new Date(record.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-1">
+                          {new Date(record.timestamp).toLocaleDateString()}
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-xs text-gray-400 italic">Waiting...</span>
+                    )}
                   </td>
                   <td className="px-8 py-6 text-gray-500 text-sm">
-                    <div className="flex items-center gap-2 group/loc cursor-pointer hover:text-blue-500 transition-colors font-medium">
-                      <MapPin className="w-3.5 h-3.5 group-hover/loc:scale-110 transition-transform" />
-                      {record.latitude?.toFixed(4)}, {record.longitude?.toFixed(4)}
-                    </div>
+                    {record.latitude ? (
+                      <div className="flex items-center gap-2 group/loc cursor-pointer hover:text-blue-500 transition-colors font-medium">
+                        <MapPin className="w-3.5 h-3.5 group-hover/loc:scale-110 transition-transform" />
+                        {record.latitude?.toFixed(4)}, {record.longitude?.toFixed(4)}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">---</span>
+                    )}
                   </td>
                 </motion.tr>
               ))}

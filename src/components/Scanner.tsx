@@ -278,12 +278,7 @@ function ScannerContent() {
           </button>
         </form>
 
-        <button 
-          onClick={() => setStatus('idle')}
-          className="w-full mt-4 text-[10px] font-bold text-gray-500 hover:text-foreground uppercase tracking-widest transition-colors"
-        >
-          Cancel & Return
-        </button>
+  
       </motion.div>
     );
   }

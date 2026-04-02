@@ -122,15 +122,6 @@ export default function EventQrPage({ params }: { params: Promise<{ eventId: str
               </div>
               <p className="text-gray-500 text-xs leading-relaxed max-w-sm mx-auto">A secure, encrypted QR code is generated every 60 seconds. Late arrivals must scan current valid codes.</p>
             </div>
-
-            <button 
-              onClick={() => refreshToken()}
-              disabled={loading}
-              className="flex items-center gap-2 mx-auto text-sm font-bold text-gray-400 hover:text-foreground transition-all uppercase tracking-widest group"
-            >
-              <RefreshCw className={`w-4 h-4 group-hover:rotate-180 transition-transform duration-500 ${loading ? 'animate-spin' : ''}`} />
-              Manual Refresh
-            </button>
           </div>
         </div>
       </motion.div>

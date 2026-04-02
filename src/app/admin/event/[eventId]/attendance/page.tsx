@@ -4,6 +4,8 @@ import { eq, desc, sql } from 'drizzle-orm';
 import { ArrowLeft, Download, Users, Calendar, MapPin, CheckCircle, XCircle, AlertCircle, Search, Filter } from 'lucide-react';
 import Link from 'next/link';
 import AttendanceList from '@/components/AttendanceList';
+import ParticipantUpload from '@/components/ParticipantUpload';
+import SyncAbsencesTrigger from '@/components/SyncAbsencesTrigger';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 export default async function AttendancePage({ params }: { params: Promise<{ eventId: string }> }) {
@@ -31,7 +33,7 @@ export default async function AttendancePage({ params }: { params: Promise<{ eve
     );
   }
 
-  // 2. Fetch Attendance Records with Participant Info
+  // 2. Fetch Participants and their Attendance Records
   const records = await db.select({
     id: attendance.id,
     timestamp: attendance.timestamp,
@@ -39,6 +41,7 @@ export default async function AttendancePage({ params }: { params: Promise<{ eve
     latitude: attendance.latitude,
     longitude: attendance.longitude,
     participant: {
+      id: participants.id,
       name: participants.name,
       surname: participants.surname,
       email: participants.email,
@@ -46,10 +49,10 @@ export default async function AttendancePage({ params }: { params: Promise<{ eve
       isRegistered: participants.isRegistered
     }
   })
-  .from(attendance)
-  .where(eq(attendance.eventId, eventId))
-  .innerJoin(participants, eq(attendance.participantId, participants.id))
-  .orderBy(desc(attendance.timestamp));
+  .from(participants)
+  .leftJoin(attendance, eq(participants.id, attendance.participantId))
+  .where(eq(participants.eventId, eventId))
+  .orderBy(desc(attendance.timestamp), desc(participants.createdAt));
 
   // Map the records to ensure local types are satisfied if needed, 
   // but since we are in a Server Component, we can just pass them.
@@ -78,7 +81,7 @@ export default async function AttendancePage({ params }: { params: Promise<{ eve
                   <span className="text-blue-500">ATTENDANCE</span>
                 </nav>
                 <h1 className="text-3xl font-extrabold tracking-tight">{event.title}</h1>
-                <div className="flex items-center gap-5 mt-3 text-sm text-gray-500 font-medium">
+                <div className="flex flex-wrap items-center gap-5 mt-3 text-sm text-gray-500 font-medium">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-blue-500" />
                     {new Date(event.date).toLocaleDateString()}
@@ -87,6 +90,7 @@ export default async function AttendancePage({ params }: { params: Promise<{ eve
                     <Users className="w-4 h-4 text-purple-500" />
                     {records.length} Attendees Recorded
                   </div>
+                  <SyncAbsencesTrigger eventId={eventId} eventDate={event.date} />
                 </div>
               </div>
             </div>
@@ -104,7 +108,10 @@ export default async function AttendancePage({ params }: { params: Promise<{ eve
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+        {/* Bulk Upload Section */}
+        <ParticipantUpload eventId={eventId} />
+
         {/* Attendance Listing Client Component */}
         <AttendanceList initialRecords={records} eventTitle={event.title} />
       </main>
