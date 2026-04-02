@@ -5,7 +5,7 @@ import { events } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { SignJWT } from 'jose';
 
-import { getSecretKey } from '@/lib/auth';
+import { getEncodedSecret } from '@/lib/auth';
 
 export async function generateQrToken(eventId: string) {
   const [event] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
@@ -25,7 +25,7 @@ export async function generateQrToken(eventId: string) {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('70s')
-    .sign(getSecretKey());
+    .sign(getEncodedSecret());
 
   return { token, expires: expires.toISOString() };
 }

@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import * as schema from './schema';
-import { admins, events, participants } from './schema';
+import { users, events, attendance } from './schema';
 
 async function main() {
   if (!process.env.DATABASE_URL) {
@@ -15,33 +15,35 @@ async function main() {
   console.log('Seeding database...');
 
   // Clear existing data
-  await db.delete(schema.attendance);
-  await db.delete(schema.participants);
-  await db.delete(schema.events);
-  await db.delete(schema.admins);
+  await db.delete(attendance);
+  await db.delete(events);
+  await db.delete(users);
 
-  // Create Admin
-  const [admin] = await db.insert(admins).values({
+  // 1. Create Admin
+  const [admin] = await db.insert(users).values({
     email: 'admin@faculty.edu',
     password: 'password123',
+    firstName: 'System',
+    lastName: 'Administrator',
+    role: 'ADMIN',
   }).returning();
 
-  // Create an Example Event
+  // 2. Create an Example Event
   const [event] = await db.insert(events).values({
-    title: 'Summer Medical Conference 2024',
-    description: 'Annual medical research conference for faculty members and students.',
-    date: new Date('2024-07-15T09:00:00Z'),
+    title: 'Advanced Medical Research Symposium',
+    description: 'A prestigious gathering of medical professionals to discuss the future of clinical attendance systems.',
+    date: new Date('2026-05-20T09:00:00Z'),
     latitude: 41.1054,
     longitude: 29.0236,
-    radius: 200,
-    qrSecret: 'super-secret-rotation-key',
+    radius: 500,
+    qrSecret: 'faculty-secret-2026-symposium',
   }).returning();
 
-  // Pre-registered participants
-  await db.insert(participants).values([
-    { name: 'Ahmet', surname: 'Yılmaz', email: 'ahmet@example.com', isRegistered: true, eventId: event.id },
-    { name: 'Ayşe', surname: 'Demir', email: 'ayse@example.com', isRegistered: true, eventId: event.id },
-    { name: 'Mehmet', surname: 'Kaya', email: 'mehmet@example.com', isRegistered: true, eventId: event.id },
+  // 3. Pre-create some participants
+  await db.insert(users).values([
+    { email: 'student1@university.edu', firstName: 'Ahmet', lastName: 'Yılmaz', password: 'password123', role: 'PARTICIPANT' },
+    { email: 'student2@university.edu', firstName: 'Ayşe', lastName: 'Demir', password: 'password123', role: 'PARTICIPANT' },
+    { email: 'student3@university.edu', firstName: 'Mehmet', lastName: 'Kaya', password: 'password123', role: 'PARTICIPANT' },
   ]);
 
   console.log('Seed data created successfully!');

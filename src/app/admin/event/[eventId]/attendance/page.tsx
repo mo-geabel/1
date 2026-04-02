@@ -1,6 +1,6 @@
 import { db } from '@/db';
-import { events, attendance, participants } from '@/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { events, attendance, users } from '@/db/schema';
+import { eq, desc, sql } from 'drizzle-orm';
 import { ArrowLeft, Download, Users, Calendar, MapPin, CheckCircle, XCircle, AlertCircle, Search, Filter } from 'lucide-react';
 import Link from 'next/link';
 import AttendanceList from '@/components/AttendanceList';
@@ -39,17 +39,22 @@ export default async function AttendancePage({ params }: { params: Promise<{ eve
     latitude: attendance.latitude,
     longitude: attendance.longitude,
     participant: {
-      name: participants.name,
-      surname: participants.surname,
-      email: participants.email,
-      phone: participants.phone,
-      isRegistered: participants.isRegistered
+      name: users.firstName,
+      surname: users.lastName,
+      email: users.email,
+      phone: users.phone,
+      isRegistered: sql<boolean>`true`
     }
   })
   .from(attendance)
   .where(eq(attendance.eventId, eventId))
-  .innerJoin(participants, eq(attendance.participantId, participants.id))
+  .innerJoin(users, eq(attendance.userId, users.id))
   .orderBy(desc(attendance.timestamp));
+
+  // Map the records to ensure local types are satisfied if needed, 
+  // but since we are in a Server Component, we can just pass them.
+  // The 'any' cast on the join result is often needed with complex inner joins in Drizzle 
+  // if the select object doesn't perfectly match the inferred schema.
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300">

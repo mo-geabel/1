@@ -33,9 +33,9 @@ function RegisterContent() {
       token: token,
       latitude: lat,
       longitude: lng,
-      participantInfo: {
-        name: formData.get('name') as string,
-        surname: formData.get('surname') as string,
+      registrationData: {
+        firstName: formData.get('name') as string,
+        lastName: formData.get('surname') as string,
         email: formData.get('email') as string,
         phone: formData.get('phone') as string,
       }
