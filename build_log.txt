@@ -1,0 +1,28 @@
+
+> task@0.1.0 build
+> next build
+
+▲ Next.js 16.2.2 (Turbopack)
+- Environments: .env
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 3.9s
+  Running TypeScript ...
+  Finished TypeScript in 4.0s ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/8) ...
+⨯ useSearchParams() should be wrapped in a suspense boundary at page "/register". Read more: https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout
+    at S (C:\Users\moham\Desktop\task\.next\server\chunks\ssr\_05u_2he._.js:2:2692)
+    at r (C:\Users\moham\Desktop\task\.next\server\chunks\ssr\_05u_2he._.js:4:6760)
+    at C:\Users\moham\Desktop\task\.next\server\chunks\ssr\_0q9whlu._.js:1:9066
+    at an (C:\Users\moham\Desktop\task\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.prod.js:2:84267)
+    at ai (C:\Users\moham\Desktop\task\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.prod.js:2:86086)
+    at al (C:\Users\moham\Desktop\task\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.prod.js:2:107860)
+    at ao (C:\Users\moham\Desktop\task\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.prod.js:2:105275)
+    at aa (C:\Users\moham\Desktop\task\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.prod.js:2:84619)
+    at ai (C:\Users\moham\Desktop\task\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.prod.js:2:86135)
+    at ai (C:\Users\moham\Desktop\task\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.prod.js:2:104615)
+Error occurred prerendering page "/register". Read more: https://nextjs.org/docs/messages/prerender-error
+Export encountered an error on /register/page: /register, exiting the build.
+⨯ Next.js build worker exited with code: 1 and signal: null
