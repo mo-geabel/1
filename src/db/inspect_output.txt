@@ -1,0 +1,58 @@
+--- List of all tables ---
+┌─────────┬────────────────┐
+│ (index) │ table_name     │
+├─────────┼────────────────┤
+│ 0       │ 'admins'       │
+│ 1       │ 'events'       │
+│ 2       │ 'attendance'   │
+│ 3       │ 'participants' │
+│ 4       │ 'users'        │
+└─────────┴────────────────┘
+--- Inspecting users table ---
+┌─────────┬──────────────┬───────────────────────────────┐
+│ (index) │ column_name  │ data_type                     │
+├─────────┼──────────────┼───────────────────────────────┤
+│ 0       │ 'id'         │ 'uuid'                        │
+│ 1       │ 'role'       │ 'USER-DEFINED'                │
+│ 2       │ 'created_at' │ 'timestamp without time zone' │
+│ 3       │ 'updated_at' │ 'timestamp without time zone' │
+│ 4       │ 'last_name'  │ 'text'                        │
+│ 5       │ 'phone'      │ 'text'                        │
+│ 6       │ 'email'      │ 'text'                        │
+│ 7       │ 'password'   │ 'text'                        │
+│ 8       │ 'first_name' │ 'text'                        │
+└─────────┴──────────────┴───────────────────────────────┘
+--- Inspecting participants table ---
+┌─────────┬─────────────────┬───────────────────────────────┐
+│ (index) │ column_name     │ data_type                     │
+├─────────┼─────────────────┼───────────────────────────────┤
+│ 0       │ 'id'            │ 'uuid'                        │
+│ 1       │ 'is_registered' │ 'boolean'                     │
+│ 2       │ 'event_id'      │ 'uuid'                        │
+│ 3       │ 'created_at'    │ 'timestamp without time zone' │
+│ 4       │ 'phone'         │ 'text'                        │
+│ 5       │ 'name'          │ 'text'                        │
+│ 6       │ 'surname'       │ 'text'                        │
+│ 7       │ 'email'         │ 'text'                        │
+└─────────┴─────────────────┴───────────────────────────────┘
+--- Inspecting attendance table ---
+Columns in "attendance":
+┌─────────┬──────────────────┬───────────────────────────────┐
+│ (index) │ column_name      │ data_type                     │
+├─────────┼──────────────────┼───────────────────────────────┤
+│ 0       │ 'id'             │ 'uuid'                        │
+│ 1       │ 'event_id'       │ 'uuid'                        │
+│ 2       │ 'participant_id' │ 'uuid'                        │
+│ 3       │ 'timestamp'      │ 'timestamp without time zone' │
+│ 4       │ 'latitude'       │ 'double precision'            │
+│ 5       │ 'longitude'      │ 'double precision'            │
+│ 6       │ 'status'         │ 'USER-DEFINED'                │
+└─────────┴──────────────────┴───────────────────────────────┘
+Values in "attendance_status" enum:
+┌─────────┬────────────────────┐
+│ (index) │ enumlabel          │
+├─────────┼────────────────────┤
+│ 0       │ 'VALID'            │
+│ 1       │ 'INVALID_LOCATION' │
+│ 2       │ 'EXPIRED_QR'       │
+└─────────┴────────────────────┘

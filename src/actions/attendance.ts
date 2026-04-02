@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/db';
-import { events, users, attendance } from '@/db/schema';
+import { events, users, attendance, participants } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { SignJWT, jwtVerify } from 'jose';
 import { getDistance } from 'geolib';
@@ -31,8 +31,11 @@ export async function checkInAction(data: {
     try {
       const result = await jwtVerify(data.token, encodedSecret);
       payload = result.payload as { eventId: string; timestamp: number };
-    } catch (err) {
-      return { error: 'Invalid or expired QR code. Please scan again.', status: 'EXPIRED_QR' };
+    } catch (err: any) {
+      if (err.code === 'ERR_JWT_EXPIRED') {
+        return { error: 'Your scan session has expired (5 minute limit). Please scan again.', status: 'EXPIRED_QR' };
+      }
+      return { error: 'Invalid QR code. Please scan again.', status: 'EXPIRED_QR' };
     }
 
     const { eventId } = payload;
@@ -63,47 +66,46 @@ export async function checkInAction(data: {
     }
 
     // 3. Identification (Session or Registration)
-    let userId: string;
-    let userName: string;
+    let participantEmail: string;
+    let participantFirstName: string;
+    let participantLastName: string;
+    let participantPhone: string | null = null;
+    let isWalkIn = false;
 
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get('session')?.value;
     
     if (data.registrationData) {
       // HANDLE INLINE REGISTRATION
-      const { email, firstName, lastName, phone, role = 'PARTICIPANT' } = data.registrationData;
-      
-      // Check if user already exists
+      const { email, firstName, lastName, phone } = data.registrationData;
+      participantEmail = email;
+      participantFirstName = firstName;
+      participantLastName = lastName;
+      participantPhone = phone;
+      isWalkIn = true;
+
+      // Optional: Update/Create user record for authentication persistence
       let [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-      
       if (!user) {
-        // Create new user (PASSWORD IS MOCKED AS 'STUB' FOR SEAMLESS FLOW IF NOT PROVIDED)
-        // In a real high-security app, we'd force a password, but for this 'seamless' requirement, 
-        // we'll assume the student just needs their name and email verified for this session.
-        const [newUser] = await db.insert(users).values({
+        await db.insert(users).values({
           email,
           firstName,
           lastName,
           phone,
-          password: 'TEMPORARY_ACCESS', // Real apps would require a password later
-          role: role as any,
-        }).returning();
-        user = newUser;
+          password: 'TEMPORARY_ACCESS',
+          role: 'PARTICIPANT',
+        });
       }
 
-      userId = user.id;
-      userName = `${user.firstName} ${user.lastName}`;
-
-      // Create session for the new/found user
+      // Create session so they don't have to register again
       const tokenString = await new SignJWT({ 
-        id: user.id, 
-        email: user.email, 
-        role: user.role,
-        name: userName
+        email, 
+        role: 'PARTICIPANT',
+        name: `${firstName} ${lastName}`
       })
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt()
-        .setExpirationTime('7d')
+        .setExpirationTime('5m')
         .sign(encodedSecret);
       
       cookieStore.set('session', tokenString, {
@@ -117,9 +119,19 @@ export async function checkInAction(data: {
       // LOGGED IN USER FLOW
       try {
         const { payload } = await jwtVerify(sessionToken, encodedSecret);
-        const decoded = payload as { id: string, name?: string, role: string };
-        userId = decoded.id;
-        userName = decoded.name || 'Student';
+        const decoded = payload as { email: string, name?: string };
+        participantEmail = decoded.email;
+        
+        // Fetch full details from users table to be safe
+        const [user] = await db.select().from(users).where(eq(users.email, participantEmail)).limit(1);
+        if (user) {
+          participantFirstName = user.firstName || 'Student';
+          participantLastName = user.lastName || '';
+          participantPhone = user.phone;
+        } else {
+          participantFirstName = decoded.name?.split(' ')[0] || 'Student';
+          participantLastName = decoded.name?.split(' ').slice(1).join(' ') || '';
+        }
       } catch (e) {
         return { error: 'Invalid session. Please login again.' };
       }
@@ -133,27 +145,47 @@ export async function checkInAction(data: {
       };
     }
 
-    // 4. Record Attendance
+    // 4. Resolve Participant Record
+    let [participant] = await db.select().from(participants).where(
+      and(
+        eq(participants.eventId, event.id),
+        eq(participants.email, participantEmail)
+      )
+    ).limit(1);
+
+    if (!participant) {
+      // Create participant for this event
+      [participant] = await db.insert(participants).values({
+        eventId: event.id,
+        email: participantEmail,
+        name: participantFirstName,
+        surname: participantLastName,
+        phone: participantPhone,
+        isRegistered: !isWalkIn, // If they had a session, we consider them 'registered' for the event logic
+      }).returning();
+    }
+
+    // 5. Record Attendance
     const [existing] = await db.select().from(attendance).where(
       and(
         eq(attendance.eventId, event.id),
-        eq(attendance.userId, userId)
+        eq(attendance.participantId, participant.id)
       )
     ).limit(1);
 
     if (existing) {
-      return { success: true, eventTitle: event.title, userName, alreadyCheckedIn: true };
+      return { success: true, eventTitle: event.title, userName: `${participantFirstName} ${participantLastName}`, alreadyCheckedIn: true };
     }
 
     await db.insert(attendance).values({
       eventId: event.id,
-      userId,
+      participantId: participant.id,
       latitude: data.latitude,
       longitude: data.longitude,
       status: 'VALID',
     });
 
-    return { success: true, eventTitle: event.title, userName };
+    return { success: true, eventTitle: event.title, userName: `${participantFirstName} ${participantLastName}` };
 
   } catch (err) {
     console.error('Check-in error detailed:', err);

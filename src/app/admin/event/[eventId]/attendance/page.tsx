@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { events, attendance, users } from '@/db/schema';
+import { events, attendance, participants } from '@/db/schema';
 import { eq, desc, sql } from 'drizzle-orm';
 import { ArrowLeft, Download, Users, Calendar, MapPin, CheckCircle, XCircle, AlertCircle, Search, Filter } from 'lucide-react';
 import Link from 'next/link';
@@ -39,16 +39,16 @@ export default async function AttendancePage({ params }: { params: Promise<{ eve
     latitude: attendance.latitude,
     longitude: attendance.longitude,
     participant: {
-      name: users.firstName,
-      surname: users.lastName,
-      email: users.email,
-      phone: users.phone,
-      isRegistered: sql<boolean>`true`
+      name: participants.name,
+      surname: participants.surname,
+      email: participants.email,
+      phone: participants.phone,
+      isRegistered: participants.isRegistered
     }
   })
   .from(attendance)
   .where(eq(attendance.eventId, eventId))
-  .innerJoin(users, eq(attendance.userId, users.id))
+  .innerJoin(participants, eq(attendance.participantId, participants.id))
   .orderBy(desc(attendance.timestamp));
 
   // Map the records to ensure local types are satisfied if needed, 

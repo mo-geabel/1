@@ -14,8 +14,8 @@ export async function generateQrToken(eventId: string) {
     throw new Error('Event not found');
   }
 
-  // Token is valid for 70 seconds (60 seconds rotation + 10 seconds grace period)
-  const expires = new Date(Date.now() + 70 * 1000);
+  // Token is valid for 5 minutes to allow for registration form completion
+  const expires = new Date(Date.now() + 5 * 60 * 1000);
   
   const token = await new SignJWT({ 
     eventId: event.id, 
@@ -24,7 +24,7 @@ export async function generateQrToken(eventId: string) {
   })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('70s')
+    .setExpirationTime('5m')
     .sign(getEncodedSecret());
 
   return { token, expires: expires.toISOString() };

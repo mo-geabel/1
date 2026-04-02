@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { attendance, users } from '@/db/schema';
+import { attendance, participants } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -15,11 +15,11 @@ export async function GET(req: NextRequest) {
     const [latest] = await db.select({
       id: attendance.id,
       timestamp: attendance.timestamp,
-      userName: users.firstName,
-      userLastName: users.lastName,
+      userName: participants.name,
+      userLastName: participants.surname,
     })
     .from(attendance)
-    .leftJoin(users, eq(attendance.userId, users.id))
+    .innerJoin(participants, eq(attendance.participantId, participants.id))
     .where(eq(attendance.eventId, eventId))
     .orderBy(desc(attendance.timestamp))
     .limit(1);

@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { attendance, events, users } from '@/db/schema';
+import { attendance, events, users, participants } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { cookies } from 'next/headers';
 import { decode } from 'jsonwebtoken';
@@ -42,7 +42,8 @@ export default async function ParticipantDashboard() {
   })
   .from(attendance)
   .leftJoin(events, eq(attendance.eventId, events.id))
-  .where(eq(attendance.userId, sessionUser.id))
+  .innerJoin(participants, eq(attendance.participantId, participants.id))
+  .where(eq(participants.email, sessionUser.email))
   .orderBy(desc(attendance.timestamp));
 
   return (

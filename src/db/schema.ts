@@ -29,10 +29,21 @@ export const events = pgTable('events', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+export const participants = pgTable('participants', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
+  email: text('email').notNull(),
+  name: text('name').notNull(),
+  surname: text('surname').notNull(),
+  phone: text('phone'),
+  isRegistered: boolean('is_registered').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 export const attendance = pgTable('attendance', {
   id: uuid('id').defaultRandom().primaryKey(),
   eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
-  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  participantId: uuid('participant_id').references(() => participants.id, { onDelete: 'cascade' }).notNull(),
   timestamp: timestamp('timestamp').defaultNow().notNull(),
   latitude: doublePrecision('latitude'),
   longitude: doublePrecision('longitude'),
@@ -41,10 +52,19 @@ export const attendance = pgTable('attendance', {
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
-  attendances: many(attendance),
+  // Users no longer directly own attendances, they are linked via participants' email if needed
 }));
 
 export const eventsRelations = relations(events, ({ many }) => ({
+  participants: many(participants),
+  attendances: many(attendance),
+}));
+
+export const participantsRelations = relations(participants, ({ one, many }) => ({
+  event: one(events, {
+    fields: [participants.eventId],
+    references: [events.id],
+  }),
   attendances: many(attendance),
 }));
 
@@ -53,8 +73,8 @@ export const attendanceRelations = relations(attendance, ({ one }) => ({
     fields: [attendance.eventId],
     references: [events.id],
   }),
-  user: one(users, {
-    fields: [attendance.userId],
-    references: [users.id],
+  participant: one(participants, {
+    fields: [attendance.participantId],
+    references: [participants.id],
   }),
 }));
