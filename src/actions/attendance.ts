@@ -3,11 +3,10 @@
 import { db } from '@/db';
 import { events, users, attendance } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { jwtVerify } from 'jose';
+import { SignJWT, jwtVerify } from 'jose';
 import { getDistance } from 'geolib';
 import { cookies } from 'next/headers';
 import { getEncodedSecret, getJwtSecret } from '@/lib/auth';
-import { decode, sign } from 'jsonwebtoken';
 
 const encodedSecret = getEncodedSecret();
 
@@ -95,12 +94,16 @@ export async function checkInAction(data: {
       userName = `${user.firstName} ${user.lastName}`;
 
       // Create session for the new/found user
-      const tokenString = sign({ 
+      const tokenString = await new SignJWT({ 
         id: user.id, 
         email: user.email, 
         role: user.role,
         name: userName
-      }, secret);
+      })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('7d')
+        .sign(encodedSecret);
       
       cookieStore.set('session', tokenString, {
         httpOnly: true,
@@ -112,7 +115,8 @@ export async function checkInAction(data: {
     } else if (sessionToken) {
       // LOGGED IN USER FLOW
       try {
-        const decoded = decode(sessionToken) as { id: string, name?: string, role: string };
+        const { payload } = await jwtVerify(sessionToken, encodedSecret);
+        const decoded = payload as { id: string, name?: string, role: string };
         userId = decoded.id;
         userName = decoded.name || 'Student';
       } catch (e) {
@@ -151,7 +155,7 @@ export async function checkInAction(data: {
     return { success: true, eventTitle: event.title, userName };
 
   } catch (err) {
-    console.error('Check-in error:', err);
+    console.error('Check-in error detailed:', err);
     return { error: 'An unexpected error occurred during verification.' };
   }
 }
