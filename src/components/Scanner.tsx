@@ -91,7 +91,8 @@ function ScannerContent() {
       setStatus('success');
     } else if (result.requiresRegistration) {
       setEventTitle(result.eventTitle || '');
-      setActiveToken(token);
+      // Use the new registration token for form submission
+      setActiveToken(result.registrationToken || token);
       setStatus('register');
     } else {
       setStatus('error');

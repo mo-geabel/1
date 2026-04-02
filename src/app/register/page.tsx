@@ -15,22 +15,36 @@ function RegisterContent() {
   const lat = parseFloat(searchParams.get('lat') || '0');
   const lng = parseFloat(searchParams.get('lng') || '0');
 
+  const [formToken, setFormToken] = useState<string | null>(token);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Pre-validate token and potentially "upgrade" it to a longer-lived registrationToken
+  useState(() => {
+    if (token) {
+      checkInAction({ token, latitude: lat, longitude: lng }).then(result => {
+        if (result.requiresRegistration && (result as any).registrationToken) {
+          setFormToken((result as any).registrationToken);
+        }
+      });
+    }
+  });
 
   async function handleSubmit(formData: FormData) {
     setLoading(true);
     setError(null);
 
-    if (!token) {
+    const activeToken = formToken || token;
+
+    if (!activeToken) {
       setError('Missing QR token. Please scan again.');
       setLoading(false);
       return;
     }
 
     const result = await checkInAction({
-      token: token,
+      token: activeToken,
       latitude: lat,
       longitude: lng,
       registrationData: {

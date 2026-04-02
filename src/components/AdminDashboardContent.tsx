@@ -1,13 +1,23 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, Calendar, MapPin, Users, QrCode, ExternalLink, LogOut, Edit, Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Calendar, MapPin, Users, QrCode, ExternalLink, LogOut, Edit, Trash2, Activity } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { logoutAction } from '@/actions/auth';
 import { deleteEventAction } from '@/actions/event';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 export default function AdminDashboardContent({ initialEvents }: { initialEvents: any[] }) {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Refresh the router cache every 30 seconds to show "newly registered" participants
+    const interval = setInterval(() => {
+      router.refresh();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
@@ -21,10 +31,14 @@ export default function AdminDashboardContent({ initialEvents }: { initialEvents
               </div>
               <div>
                 <span className="text-xl font-bold tracking-tight">Admin Dashboard</span>
-                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] leading-none mt-1">Faculty of Medicine</p>
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] leading-none mt-1 text-center md:text-left">Faculty of Medicine</p>
               </div>
             </div>
             <div className="flex items-center gap-5">
+              <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-green-500/10 text-green-500 border border-green-500/20 rounded-full animate-pulse shadow-sm">
+                <Activity className="w-3.5 h-3.5" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-center">Live Feed Active</span>
+              </div>
               <ThemeToggle />
               <div className="h-8 w-px bg-border-color mx-2 hidden sm:block" />
               <form action={logoutAction}>
@@ -95,7 +109,7 @@ export default function AdminDashboardContent({ initialEvents }: { initialEvents
                   </div>
                   <div className="flex items-center gap-4 text-sm text-gray-500 font-bold tracking-tight">
                     <Users className="w-4 h-4 text-purple-400" />
-                    <span>View Attendance Details</span>
+                    <span>{event.participantCount} Attendees Recorded</span>
                   </div>
                 </div>
               </div>

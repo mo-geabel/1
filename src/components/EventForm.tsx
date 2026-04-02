@@ -68,6 +68,7 @@ export default function EventForm({ initialData, onSubmit, title, subtitle }: Ev
 
     const result = await onSubmit(formData);
     if (result.success) {
+      router.refresh(); // Force refresh to clear any stale cache
       router.push('/admin/dashboard');
     } else {
       setError(result.error || 'Operation failed.');

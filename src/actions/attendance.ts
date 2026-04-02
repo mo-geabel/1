@@ -30,15 +30,20 @@ export async function checkInAction(data: {
 
     try {
       const result = await jwtVerify(data.token, encodedSecret);
-      payload = result.payload as { eventId: string; timestamp: number };
+      payload = result.payload as { eventId: string; type: string; timestamp: number };
     } catch (err: any) {
       if (err.code === 'ERR_JWT_EXPIRED') {
-        return { error: 'Your scan session has expired (5 minute limit). Please scan again.', status: 'EXPIRED_QR' };
+        return { error: 'Your scan session has expired. Please scan the QR code again.', status: 'EXPIRED_QR' };
       }
-      return { error: 'Invalid QR code. Please scan again.', status: 'EXPIRED_QR' };
+      return { error: 'Invalid or corrupted QR code. Please scan again.', status: 'EXPIRED_QR' };
     }
 
-    const { eventId } = payload;
+    const { eventId, type } = payload;
+    
+    // Security: 'registration_submit' token can only be used if registrationData is provided
+    if (type === 'registration_submit' && !data.registrationData) {
+      return { error: 'Invalid operation. Please scan the QR code again.', status: 'EXPIRED_QR' };
+    }
     
     // Fetch Event
     const [event] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
@@ -137,8 +142,20 @@ export async function checkInAction(data: {
       }
     } else {
       // GUEST FLOW (Needs registration)
+      // Generate a longer lived registration token (15 mins) to allow form completion
+      const registrationToken = await new SignJWT({ 
+        eventId: event.id, 
+        type: 'registration_submit',
+        timestamp: Date.now() 
+      })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('15m')
+        .sign(encodedSecret);
+
       return { 
         requiresRegistration: true, 
+        registrationToken,
         eventId: event.id,
         eventTitle: event.title,
         message: 'Location verified! Please identify yourself to complete check-in.' 
