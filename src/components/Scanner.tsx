@@ -67,13 +67,6 @@ function ScannerContent() {
     }
   }, [tokenFromUrl, location, status]);
 
-  useEffect(() => {
-    return () => {
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(console.error);
-      }
-    };
-  }, []);
 
   const handleVerify = async (token: string, registrationData?: typeof regData) => {
     if (!location) {
