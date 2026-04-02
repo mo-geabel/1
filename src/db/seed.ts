@@ -35,7 +35,7 @@ async function main() {
     date: new Date('2026-05-20T09:00:00Z'),
     latitude: 41.1054,
     longitude: 29.0236,
-    radius: 500,
+    radius: 10000000, // 10,000 km (For Global Testing)
     qrSecret: 'faculty-secret-2026-symposium',
   }).returning();
 

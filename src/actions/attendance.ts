@@ -51,8 +51,9 @@ export async function checkInAction(data: {
       );
 
       if (distance > event.radius) {
+        const distanceKm = (distance / 1000).toFixed(1);
         return { 
-          error: `Location verification failed. You are too far from the event (${distance}m away). Max radius is ${event.radius}m.`,
+          error: `Location verification failed. You are ${distanceKm}km away from the event. (Max allowed: ${event.radius}m)`,
           status: 'INVALID_LOCATION',
           distance
         };
