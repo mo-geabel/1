@@ -40,29 +40,50 @@ function ScannerContent() {
   const fetchLocation = () => {
     if (typeof window === 'undefined') return;
     setError(null);
+
+    // Security context check
+    if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+      setError('Security Error: Geolocation requires HTTPS. Please ensure you are using a secure connection.');
+      return;
+    }
+
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
+          console.log('Location success:', pos.coords.latitude, pos.coords.longitude);
           setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
           setError(null);
         },
         (err) => {
+          console.error('Location error:', err);
           let msg = 'Location access failed. ';
-          if (err.code === 1) msg += 'Please enable location permissions.';
-          else if (err.code === 2) msg += 'Position unavailable.';
+          if (err.code === 1) msg += 'Please enable location permissions in your browser settings.';
+          else if (err.code === 2) msg += 'Position unavailable. Try moving to a clearer area.';
+          else if (err.code === 3) msg += 'Request timed out. Please try again.';
           else msg += err.message;
           setError(msg);
         },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        { 
+          enableHighAccuracy: true, 
+          timeout: 20000, 
+          maximumAge: 30000 // Allow 30s old cached position
+        }
       );
     } else {
-      setError('Geolocation is not supported.');
+      setError('Geolocation is not supported by your browser.');
     }
   };
 
   useEffect(() => {
     fetchLocation();
   }, []);
+
+  // AUTO-VERIFY if token is in URL
+  useEffect(() => {
+    if (tokenFromUrl && location && status === 'idle') {
+      handleInitialScan(tokenFromUrl);
+    }
+  }, [tokenFromUrl, location, status]);
 
   // Step 1: Initial Scan Validation
   const handleInitialScan = async (token: string) => {
@@ -254,19 +275,24 @@ function ScannerContent() {
             
             <div className="space-y-4">
               <button 
-                onClick={startScanner}
-                disabled={!location}
-                className="w-full bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 py-4 rounded-2xl font-bold text-white transition-all shadow-xl shadow-blue-600/20 active:scale-[0.98] disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed group flex items-center justify-center gap-3"
+                onClick={() => {
+                  if (!location) {
+                    fetchLocation();
+                  } else {
+                    startScanner();
+                  }
+                }}
+                className="w-full bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 py-4 rounded-2xl font-bold text-white transition-all shadow-xl shadow-blue-600/20 active:scale-[0.98] group flex items-center justify-center gap-3"
               >
                 {!location && !error ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Checking Location...
+                    Verify Location to Start
                   </>
                 ) : (
                   <>
                     <Camera className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                    Open Camera Scanner
+                    {location ? 'Open Camera Scanner' : 'Retry Location Access'}
                   </>
                 )}
               </button>
