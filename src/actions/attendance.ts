@@ -11,6 +11,86 @@ import { getEncodedSecret, getJwtSecret } from '@/lib/auth';
 
 const encodedSecret = getEncodedSecret();
 
+export async function validateScanAction(data: {
+  token: string;
+  latitude: number | null;
+  longitude: number | null;
+}) {
+  try {
+    // 1. Verify QR Token
+    const encodedSecret = getEncodedSecret();
+    let payload;
+    try {
+      const result = await jwtVerify(data.token, encodedSecret);
+      payload = result.payload as { eventId: string; type: string; timestamp: number };
+    } catch (err: any) {
+      if (err.code === 'ERR_JWT_EXPIRED') {
+        return { error: 'Scan session expired. Please scan again.', status: 'EXPIRED_QR' };
+      }
+      return { error: 'Invalid QR code. Please scan again.', status: 'EXPIRED_QR' };
+    }
+
+    const { eventId } = payload;
+    const [event] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    if (!event) return { error: 'Event not found.' };
+
+    // 2. Proximity Check
+    if (data.latitude && data.longitude) {
+      const distance = getDistance(
+        { latitude: data.latitude, longitude: data.longitude },
+        { latitude: event.latitude, longitude: event.longitude }
+      );
+      if (distance > event.radius) {
+        return { error: `Too far from event site (${(distance/1000).toFixed(1)}km away).`, status: 'INVALID_LOCATION' };
+      }
+    } else {
+      return { error: 'GPS location required.', status: 'INVALID_LOCATION' };
+    }
+
+    // Return a session token that proves QR + GPS is valid
+    const sessionToken = await new SignJWT({ 
+      eventId: event.id, 
+      lat: data.latitude, 
+      lng: data.longitude,
+      type: 'scan_session'
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('5m')
+      .sign(encodedSecret);
+
+    return { success: true, sessionToken, eventTitle: event.title, eventId: event.id };
+  } catch (err) {
+    return { error: 'Validation failed.' };
+  }
+}
+
+export async function lookupParticipantAction(email: string, sessionToken: string) {
+  try {
+    const { payload } = await jwtVerify(sessionToken, encodedSecret);
+    const { eventId } = payload as { eventId: string };
+    
+    const [participant] = await db.select().from(participants).where(
+      and(
+        eq(participants.eventId, eventId),
+        eq(participants.email, email.toLowerCase().trim())
+      )
+    ).limit(1);
+
+    if (participant) {
+      return { 
+        recognized: true, 
+        name: participant.name, 
+        surname: participant.surname,
+        email: participant.email
+      };
+    }
+    return { recognized: false, email };
+  } catch (err) {
+    return { error: 'Session expired or invalid.' };
+  }
+}
+
 export async function checkInAction(data: {
   token: string;
   latitude: number | null;

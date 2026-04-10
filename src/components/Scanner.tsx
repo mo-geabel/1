@@ -6,28 +6,32 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Camera, MapPin, Loader2, CheckCircle2, 
   XCircle, UserPlus, Info, RefreshCw, 
-  ChevronRight, Mail, User, Smartphone, Sparkles
+  ChevronRight, Mail, User, Smartphone, Sparkles,
+  Search, ArrowRight, ShieldCheck
 } from 'lucide-react';
-import { checkInAction } from '@/actions/attendance';
+import { checkInAction, validateScanAction, lookupParticipantAction } from '@/actions/attendance';
 import { useSearchParams } from 'next/navigation';
+import toast from 'react-hot-toast';
+
+type ScannerStatus = 'idle' | 'scanning' | 'verifying' | 'ask-email' | 'searching' | 'register' | 'success' | 'error';
 
 function ScannerContent() {
   const searchParams = useSearchParams();
   const tokenFromUrl = searchParams.get('token');
   
-  const [status, setStatus] = useState<'idle' | 'scanning' | 'verifying' | 'success' | 'error' | 'register'>('idle');
+  const [status, setStatus] = useState<ScannerStatus>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [activeToken, setActiveToken] = useState<string | null>(null);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null);
   const [eventTitle, setEventTitle] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
   // Registration Form State
+  const [email, setEmail] = useState('');
   const [regData, setRegData] = useState({
     firstName: '',
     lastName: '',
-    email: '',
     phone: '',
   });
 
@@ -60,43 +64,92 @@ function ScannerContent() {
     fetchLocation();
   }, []);
 
-  useEffect(() => {
-    if (tokenFromUrl && location && status === 'idle') {
-      setActiveToken(tokenFromUrl);
-      handleVerify(tokenFromUrl);
-    }
-  }, [tokenFromUrl, location, status]);
-
-
-  const handleVerify = async (token: string, registrationData?: typeof regData) => {
-    if (!location) {
-      setError('Waiting for GPS location...');
-      return;
-    }
-
+  // Step 1: Initial Scan Validation
+  const handleInitialScan = async (token: string) => {
     setLoading(true);
-    if (!registrationData) setStatus('verifying');
+    setStatus('verifying');
     setError(null);
 
-    const result = await checkInAction({
+    const result = await validateScanAction({
       token,
-      latitude: location.lat,
-      longitude: location.lng,
-      registrationData
-    }) as any;
+      latitude: location?.lat || null,
+      longitude: location?.lng || null,
+    });
 
-    if (result.success) {
+    if (result.success && result.sessionToken) {
+      setSessionToken(result.sessionToken);
       setEventTitle(result.eventTitle || '');
-      setUserName(result.userName || 'Student');
-      setStatus('success');
-    } else if (result.requiresRegistration) {
-      setEventTitle(result.eventTitle || '');
-      // Use the new registration token for form submission
-      setActiveToken(result.registrationToken || token);
-      setStatus('register');
+      setStatus('ask-email');
     } else {
       setStatus('error');
       setError(result.error || 'Verification failed.');
+    }
+    setLoading(false);
+  };
+
+  // Step 2: Email Lookup
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sessionToken) return;
+
+    setLoading(true);
+    setStatus('searching');
+    
+    const result = await lookupParticipantAction(email, sessionToken);
+
+    if (result.error) {
+      toast.error(result.error);
+      setStatus('error');
+      setError(result.error);
+    } else if (result.recognized) {
+      // AUTOMATIC CHECK-IN for recognized users
+      const checkInResult = await checkInAction({
+        token: sessionToken,
+        latitude: location?.lat || null,
+        longitude: location?.lng || null,
+        registrationData: {
+          email: result.email!,
+          firstName: result.name!,
+          lastName: result.surname!,
+          phone: '', // Optional for existing
+        }
+      }) as any;
+
+      if (checkInResult.success) {
+        setUserName(`${result.name} ${result.surname}`);
+        setStatus('success');
+      } else {
+        setStatus('error');
+        setError(checkInResult.error || 'Check-in failed.');
+      }
+    } else {
+      // NEW USER: Transition to full registration
+      setStatus('register');
+    }
+    setLoading(false);
+  };
+
+  // Step 3: Registration Submit
+  const handleRegistrationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sessionToken) return;
+
+    setLoading(true);
+    const result = await checkInAction({
+      token: sessionToken,
+      latitude: location?.lat || null,
+      longitude: location?.lng || null,
+      registrationData: {
+        email,
+        ...regData
+      }
+    }) as any;
+
+    if (result.success) {
+      setUserName(`${regData.firstName} ${regData.lastName}`);
+      setStatus('success');
+    } else {
+      toast.error(result.error || 'Registration failed.');
     }
     setLoading(false);
   };
@@ -129,19 +182,15 @@ function ScannerContent() {
             }
             scanner.stop().then(() => {
               scannerRef.current = null;
-              setActiveToken(token);
-              handleVerify(token);
+              handleInitialScan(token);
             }).catch(console.error);
           } catch (e) {
             console.error('Invalid QR code');
           }
         },
-        (errorMessage) => {
-          // Silent during active scanning
-        }
+        (errorMessage) => {}
       ).catch((err) => {
-        console.error('Camera start error:', err);
-        setError('Camera blocked. Please check your browser permissions and ensure you are using HTTPS.');
+        setError('Camera blocked. Please check permissions.');
         setStatus('error');
       });
       
@@ -168,12 +217,12 @@ function ScannerContent() {
   if (status === 'success') {
     return (
       <div className="w-full max-w-lg bg-card-bg/60 backdrop-blur-3xl border border-border-color p-12 rounded-4xl text-center shadow-2xl relative overflow-hidden group">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/5 rounded-full blur-3xl pointer-events-none" />
         <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-6 group-hover:scale-110 transition-transform" />
         <h2 className="text-2xl font-black text-foreground mb-2 tracking-tight">Access Granted!</h2>
         <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-green-500/10 text-green-500 border border-green-500/20 rounded-full text-[10px] font-black uppercase tracking-widest mb-6">
           <Sparkles className="w-3 h-3" />
-          Verified: {userName}
+          Welcome, {userName}
         </div>
         <p className="text-gray-500 text-sm font-medium mb-10 leading-relaxed px-4">
           Your presence has been successfully recorded for:
@@ -182,104 +231,6 @@ function ScannerContent() {
           {eventTitle}
         </div>
       </div>
-    );
-  }
-
-  if (status === 'register' && activeToken) {
-    return (
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md bg-card-bg/60 backdrop-blur-3xl border border-border-color p-8 rounded-4xl shadow-2xl relative overflow-hidden"
-      >
-        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
-        
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
-            <UserPlus className="w-8 h-8 text-blue-500" />
-          </div>
-          <h2 className="text-2xl font-black text-foreground mb-2">Identify Yourself</h2>
-          <p className="text-gray-500 text-xs font-medium px-4">
-            We've verified your location for <span className="text-blue-500 font-bold">{eventTitle}</span>. Provide your details to complete check-in.
-          </p>
-        </div>
-
-        <form 
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleVerify(activeToken, regData);
-          }}
-          className="space-y-4"
-        >
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">First Name</label>
-              <div className="relative group">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-                <input
-                  required
-                  value={regData.firstName}
-                  onChange={(e) => setRegData({...regData, firstName: e.target.value})}
-                  className="w-full pl-11 pr-4 py-3 bg-background border border-border-color rounded-2xl text-foreground focus:ring-2 focus:ring-blue-500/40 transition-all font-bold text-sm"
-                  placeholder="John"
-                />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Last Name</label>
-              <div className="relative group">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-                <input
-                  required
-                  value={regData.lastName}
-                  onChange={(e) => setRegData({...regData, lastName: e.target.value})}
-                  className="w-full pl-11 pr-4 py-3 bg-background border border-border-color rounded-2xl text-foreground focus:ring-2 focus:ring-blue-500/40 transition-all font-bold text-sm"
-                  placeholder="Doe"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
-            <div className="relative group">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-              <input
-                required
-                type="email"
-                value={regData.email}
-                onChange={(e) => setRegData({...regData, email: e.target.value})}
-                className="w-full pl-11 pr-4 py-3 bg-background border border-border-color rounded-2xl text-foreground focus:ring-2 focus:ring-blue-500/40 transition-all font-bold text-sm"
-                placeholder="name@university.edu"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Phone Number</label>
-            <div className="relative group">
-              <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-              <input
-                required
-                value={regData.phone}
-                onChange={(e) => setRegData({...regData, phone: e.target.value})}
-                className="w-full pl-11 pr-4 py-3 bg-background border border-border-color rounded-2xl text-foreground focus:ring-2 focus:ring-blue-500/40 transition-all font-bold text-sm"
-                placeholder="+90 XXX XXX XX XX"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-all shadow-xl shadow-blue-500/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 mt-4"
-          >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Complete Check-in <ChevronRight className="w-4 h-4" /></>}
-          </button>
-        </form>
-
-  
-      </motion.div>
     );
   }
 
@@ -374,9 +325,9 @@ function ScannerContent() {
           </motion.div>
         )}
 
-        {status === 'verifying' && (
+        {(status === 'verifying' || status === 'searching') && (
           <motion.div
-            key="verifying"
+            key="loading"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
@@ -386,11 +337,114 @@ function ScannerContent() {
               <div className="absolute inset-0 border-4 border-blue-500/20 rounded-full" />
               <div className="absolute inset-0 border-4 border-t-blue-500 rounded-full animate-spin" />
               <div className="absolute inset-0 flex items-center justify-center">
-                <MapPin className="w-8 h-8 text-blue-400" />
+                {status === 'verifying' ? <ShieldCheck className="w-8 h-8 text-blue-400" /> : <Search className="w-8 h-8 text-blue-400" />}
               </div>
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-2 tracking-tight">Verifying Presence</h2>
-            <p className="text-gray-500 leading-relaxed max-w-[200px] mx-auto text-sm">Validating QR code and GPS location. Please hold on.</p>
+            <h2 className="text-2xl font-bold text-foreground mb-2 tracking-tight">
+              {status === 'verifying' ? 'Verifying Scan' : 'Identifying You'}
+            </h2>
+            <p className="text-gray-500 leading-relaxed max-w-[200px] mx-auto text-sm">
+              {status === 'verifying' ? 'Validating QR and GPS coordinates.' : 'Searching for your registration record.'}
+            </p>
+          </motion.div>
+        )}
+
+        {status === 'ask-email' && (
+          <motion.div
+            key="ask-email"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full bg-card-bg/60 backdrop-blur-3xl border border-border-color p-10 rounded-4xl shadow-2xl relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
+                <Mail className="w-8 h-8 text-blue-500" />
+              </div>
+              <h2 className="text-2xl font-black text-foreground mb-1">Enter Your Email</h2>
+              <p className="text-gray-500 text-xs font-medium">Verify your identity for <span className="text-blue-500">{eventTitle}</span></p>
+            </div>
+            <form onSubmit={handleEmailSubmit} className="space-y-4">
+              <div className="relative group">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                <input
+                  required
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="university@email.com"
+                  className="w-full pl-11 pr-4 py-4 bg-background border border-border-color rounded-2xl text-foreground focus:ring-2 focus:ring-blue-500/40 transition-all font-bold text-sm"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-all shadow-xl shadow-blue-500/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                Continue <ArrowRight className="w-4 h-4" />
+              </button>
+            </form>
+          </motion.div>
+        )}
+
+        {status === 'register' && (
+          <motion.div 
+            key="register"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full bg-card-bg/60 backdrop-blur-3xl border border-border-color p-8 rounded-4xl shadow-2xl"
+          >
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-orange-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-orange-500/20">
+                <UserPlus className="w-8 h-8 text-orange-500" />
+              </div>
+              <h2 className="text-2xl font-black text-foreground mb-1">Complete Registration</h2>
+              <p className="text-gray-500 text-xs font-medium mb-2">We couldn't find your record. Please provide your details.</p>
+              <div className="inline-flex py-1 px-3 bg-card-bg border border-border-color rounded-full text-[10px] font-bold text-blue-400">{email}</div>
+            </div>
+
+            <form onSubmit={handleRegistrationSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">First Name</label>
+                  <input
+                    required
+                    value={regData.firstName}
+                    onChange={(e) => setRegData({...regData, firstName: e.target.value})}
+                    className="w-full px-4 py-3 bg-background border border-border-color rounded-2xl text-foreground focus:ring-2 focus:ring-blue-500/40 transition-all font-bold text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Last Name</label>
+                  <input
+                    required
+                    value={regData.lastName}
+                    onChange={(e) => setRegData({...regData, lastName: e.target.value})}
+                    className="w-full px-4 py-3 bg-background border border-border-color rounded-2xl text-foreground focus:ring-2 focus:ring-blue-500/40 transition-all font-bold text-sm"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Phone Number</label>
+                <div className="relative group">
+                  <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                  <input
+                    required
+                    value={regData.phone}
+                    onChange={(e) => setRegData({...regData, phone: e.target.value})}
+                    className="w-full pl-11 pr-4 py-3 bg-background border border-border-color rounded-2xl text-foreground focus:ring-2 focus:ring-blue-500/40 transition-all font-bold text-sm"
+                    placeholder="+90 XXX XXX XX XX"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-all shadow-xl shadow-blue-500/20 active:scale-95 disabled:opacity-50 mt-2"
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Complete Check-in"}
+              </button>
+            </form>
           </motion.div>
         )}
 
@@ -399,7 +453,6 @@ function ScannerContent() {
             key="error"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
             className="text-center p-12 bg-red-500/10 border border-red-500/20 rounded-4xl shadow-2xl"
           >
             <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500">
@@ -418,24 +471,11 @@ function ScannerContent() {
       </AnimatePresence>
 
       <style jsx global>{`
-        #reader {
-          border: none !important;
-          background: var(--card-bg) !important;
-        }
-        #reader video {
-          border-radius: 0 !important;
-          object-fit: cover;
-        }
-        #reader__dashboard_section_csr button {
-          display: none;
-        }
-        @keyframes scan {
-          0% { top: 0; }
-          100% { top: 100%; }
-        }
-        .animate-scan {
-          animation: scan 2s linear infinite;
-        }
+        #reader { border: none !important; background: var(--card-bg) !important; }
+        #reader video { border-radius: 0 !important; object-fit: cover; }
+        #reader__dashboard_section_csr button { display: none; }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+        .animate-scan { animation: scan 2s linear infinite; }
       `}</style>
     </div>
   );

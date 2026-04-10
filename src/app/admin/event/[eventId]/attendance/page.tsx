@@ -113,7 +113,7 @@ export default async function AttendancePage({ params }: { params: Promise<{ eve
         <ParticipantUpload eventId={eventId} />
 
         {/* Attendance Listing Client Component */}
-        <AttendanceList initialRecords={records} eventTitle={event.title} />
+        <AttendanceList initialRecords={records} eventTitle={event.title} eventId={eventId} />
       </main>
     </div>
   );

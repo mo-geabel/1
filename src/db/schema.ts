@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, doublePrecision, integer, boolean, pgEnum, uuid } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, doublePrecision, integer, boolean, pgEnum, uuid, uniqueIndex } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const attendanceStatusEnum = pgEnum('attendance_status', ['VALID', 'INVALID_LOCATION', 'EXPIRED_QR', 'ABSENT', 'EXTRA']);
@@ -38,6 +38,10 @@ export const participants = pgTable('participants', {
   phone: text('phone'),
   isRegistered: boolean('is_registered').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => {
+  return {
+    eventEmailUnique: uniqueIndex('event_email_unique').on(table.eventId, table.email),
+  }
 });
 
 export const attendance = pgTable('attendance', {

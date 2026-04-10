@@ -5,6 +5,7 @@ import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Download, Table } 
 import * as XLSX from 'xlsx';
 import { importParticipantsAction } from '@/actions/participants';
 import { toast } from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 interface ParticipantUploadProps {
   eventId: string;
@@ -14,6 +15,7 @@ export default function ParticipantUpload({ eventId }: ParticipantUploadProps) {
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -30,30 +32,49 @@ export default function ParticipantUpload({ eventId }: ParticipantUploadProps) {
     reader.onload = async (e) => {
       try {
         const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
+        const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const json = XLSX.utils.sheet_to_json(sheet) as any[];
 
+        console.log('Raw JSON from file:', json);
+
+        if (!json || json.length === 0) {
+          toast.error('The file is empty or could not be read.');
+          setLoading(false);
+          return;
+        }
+
         // Expected columns: Name, Surname, Email, Phone
         // Normalizing keys to lowercase for flexible matching
-        const formattedData = json.map(row => {
+        const formattedData = json.map((row, index) => {
           const keys = Object.keys(row);
           const getVal = (possibleKeys: string[]) => {
-            const key = keys.find(k => possibleKeys.includes(k.toLowerCase().trim()));
+            const key = keys.find(k => {
+              const normalizedKey = k.toLowerCase().replace(/[\s_]/g, '').trim();
+              return possibleKeys.some(pk => {
+                const normalizedPk = pk.toLowerCase().replace(/[\s_]/g, '').trim();
+                return normalizedKey === normalizedPk || normalizedKey.includes(normalizedPk);
+              });
+            });
             return key ? row[key] : '';
           };
 
-          return {
-            name: getVal(['name', 'first name', 'firstname', 'ad']),
-            surname: getVal(['surname', 'last name', 'lastname', 'soyad']),
-            email: getVal(['email', 'e-mail', 'mail']),
-            phone: getVal(['phone', 'tel', 'telefon', 'mobile']).toString(),
+          const p = {
+            name: getVal(['name', 'firstname', 'first', 'ad']),
+            surname: getVal(['surname', 'lastname', 'last', 'soyad']),
+            email: getVal(['email', 'mail', 'e-mail']),
+            phone: getVal(['phone', 'tel', 'mobile', 'telefon', 'gsm'])?.toString() || '',
           };
-        }).filter(p => p.email); // Must have email
+
+          console.log(`Row ${index + 1} parsed:`, p);
+          return p;
+        }).filter(p => p.email && p.email.toString().includes('@'));
+
+        console.log('Formatted participants:', formattedData);
 
         if (formattedData.length === 0) {
-          toast.error('No valid participants found. Ensure your file has an "Email" column.');
+          toast.error('No valid participants found. Ensure your file has an "Email" column and valid data.');
           setLoading(false);
           return;
         }
@@ -64,6 +85,7 @@ export default function ParticipantUpload({ eventId }: ParticipantUploadProps) {
           toast.success(`Successfully imported ${result.count} participants!`);
           setFile(null);
           if (fileInputRef.current) fileInputRef.current.value = '';
+          router.refresh();
         } else {
           toast.error(result.error || 'Failed to import participants.');
         }
@@ -75,7 +97,7 @@ export default function ParticipantUpload({ eventId }: ParticipantUploadProps) {
       }
     };
 
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
   };
 
   const downloadTemplate = () => {
