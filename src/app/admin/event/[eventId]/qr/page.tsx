@@ -61,15 +61,16 @@ export default function EventQrPage({ params }: { params: Promise<{ eventId: str
       {/* Background decoration */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
 
-      <div className="absolute top-8 left-8 flex items-center gap-4">
+      <div className="absolute top-6 left-6 md:top-8 md:left-8 flex items-center bg-card-bg/50 backdrop-blur-3xl border border-border-color rounded-2xl p-1.5 shadow-xl transition-all z-50">
         <Link 
           href="/admin/dashboard"
-          className="p-3 rounded-2xl bg-card-bg/50 backdrop-blur-xl border border-border-color text-gray-400 hover:text-foreground transition-all flex items-center gap-2 group shadow-sm"
+          className="p-2.5 rounded-xl hover:bg-primary/5 text-gray-400 hover:text-primary transition-all flex items-center gap-2 group"
         >
           <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-          <span className="hidden sm:inline">Back to Dashboard</span>
+          <span className="hidden sm:inline font-bold text-xs uppercase tracking-widest">{t('dashboard')}</span>
         </Link>
-        <ThemeToggle />
+        <div className="h-6 w-px bg-border-color mx-1.5" />
+        <ThemeToggle minimal />
       </div>
 
       <motion.div 

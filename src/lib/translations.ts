@@ -110,6 +110,9 @@ export const translations = {
     failed_delete: "Failed to delete",
     failed_delete_participant: "Failed to delete participant",
     description: "Description",
+    registration_type: "Reg. Type",
+    pre_registered: "Pre-registered",
+    walk_in: "Walk-in",
 
     // Event Form Keys
     session_basics: "Session Basics",
@@ -234,6 +237,9 @@ export const translations = {
     failed_delete: "Silme başarısız",
     failed_delete_participant: "Katılımcı silinemedi",
     description: "Açıklama",
+    registration_type: "Kayıt Tipi",
+    pre_registered: "Ön Kayıtlı",
+    walk_in: "Yeni Kayıt",
 
     // Event Form Keys
     session_basics: "Oturum Bilgileri",

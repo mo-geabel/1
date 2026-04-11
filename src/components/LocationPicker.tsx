@@ -105,7 +105,7 @@ export default function LocationPicker({ lat, lng, onChange }: LocationPickerPro
       </MapContainer>
       
       {/* Search Overlay */}
-      <div className="absolute top-2 md:top-4 left-2 right-2 md:left-4 md:right-4 z-20 max-w-sm mx-auto md:mx-0">
+      <div className="absolute top-2 md:top-4 right-2 md:right-4 z-20 w-[calc(100%-1rem)] max-w-[240px] md:max-w-sm">
         <div className="relative group">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             {searching ? (

@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { Sun, Moon, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export function ThemeToggle() {
+export function ThemeToggle({ minimal = false }: { minimal?: boolean }) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -18,7 +18,9 @@ export function ThemeToggle() {
   return (
     <button
       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      className="relative p-3 rounded-2xl bg-card-bg/50 backdrop-blur-xl border border-border-color hover:border-primary/50 transition-all group overflow-hidden"
+      className={minimal 
+        ? "relative p-2.5 rounded-xl hover:bg-primary/5 transition-all group overflow-hidden" 
+        : "relative p-3 rounded-2xl bg-card-bg/50 backdrop-blur-xl border border-border-color hover:border-primary/50 transition-all group overflow-hidden"}
       aria-label="Toggle Theme"
     >
       <AnimatePresence mode="wait">

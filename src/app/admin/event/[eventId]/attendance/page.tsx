@@ -100,15 +100,18 @@ export default async function AttendancePage({ params }: { params: Promise<{ eve
               </div>
             </div>
             
-            <div className="flex flex-row-reverse md:flex-row items-center justify-between md:justify-end w-full md:w-auto gap-2 md:gap-4">
-              <ThemeToggle />
-              <Link 
-                href={`/admin/event/${eventId}/qr`}
-                className="flex items-center gap-1.5 md:gap-3 bg-primary hover:bg-primary-hover px-2 md:px-6 py-2 md:py-4 rounded-xl font-bold text-white transition-all shadow-lg shadow-primary/20 active:scale-95 group text-[10px] md:text-base"
-              >
-                <QrCode className="w-3.5 h-3.5 md:w-5 md:h-5 group-hover:scale-110 transition-transform" />
-                <span className="truncate">{t('launch_qr_page')}</span>
-              </Link>
+            <div className="flex flex-row-reverse md:flex-row items-center justify-between md:justify-end w-full md:w-auto gap-3 md:gap-4">
+              <div className="flex items-center bg-card-bg/50 backdrop-blur-3xl border border-border-color rounded-2xl p-1 md:p-1.5 shadow-sm group">
+                <ThemeToggle minimal />
+                <div className="h-6 w-px bg-border-color mx-1 md:mx-2" />
+                <Link 
+                  href={`/admin/event/${eventId}/qr`}
+                  className="flex items-center gap-1.5 md:gap-3 bg-primary hover:bg-primary-hover px-3 md:px-6 py-2 md:py-3.5 rounded-xl font-bold text-white transition-all shadow-lg shadow-primary/20 active:scale-95 group text-[10px] md:text-sm"
+                >
+                  <QrCode className="w-3.5 h-3.5 md:w-5 md:h-5 group-hover:scale-110 transition-transform" />
+                  <span className="truncate">{t('launch_qr_page')}</span>
+                </Link>
+              </div>
             </div>
           </div>
         </div>

@@ -44,17 +44,6 @@ function ScannerContent() {
     if (typeof window === 'undefined') return;
     setError(null);
 
-    // Permission API check
-    if (navigator.permissions && navigator.permissions.query) {
-      try {
-        const status = await navigator.permissions.query({ name: 'geolocation' });
-        console.log('Browser Permission Status:', status.state);
-        status.onchange = () => console.log('Permission changed to:', status.state);
-      } catch (e) {
-        console.warn('Permissions query not supported');
-      }
-    }
-
     // Security context check
     const isIP = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(window.location.hostname);
     if (!window.isSecureContext && window.location.hostname !== 'localhost' && !isIP) {
@@ -67,7 +56,7 @@ function ScannerContent() {
     if ('geolocation' in navigator) {
       const options = { 
         enableHighAccuracy: !isRetry, 
-        timeout: 12000, 
+        timeout: 15000, 
         maximumAge: isRetry ? 60000 : 0 
       };
       
@@ -90,13 +79,17 @@ function ScannerContent() {
           }
 
           let msg = '';
-          if (errCode === 1) msg = 'Location Permission Denied. Please check your phone settings.';
+          if (errCode === 1) {
+            msg = 'Location Permission Denied. Please check your phone settings.';
+            if (/iPhone|iPad|iPod|Safari/i.test(navigator.userAgent)) {
+              msg = 'Location Denied. Tap the "aA" icon in the URL bar, go to "Website Settings", and set Location to "Allow".';
+            }
+          }
           else if (errCode === 2) msg = 'Position Unavailable. Move to an area with better signal.';
           else if (errCode === 3) msg = 'Request Timed Out. Your GPS is taking too long to respond.';
           else msg = errMsg;
           
-          // Add technical details for on-screen debugging
-          setError(`${msg} (Error Code: ${errCode || '?'})`);
+          setError(msg);
         },
         options
       );
@@ -106,7 +99,8 @@ function ScannerContent() {
   };
 
   useEffect(() => {
-    fetchLocation();
+    // We removed fetchLocation() from mount to support Safari's user gesture requirement.
+    // The user must now click the 'Verify Location' button manually.
   }, []);
 
   // AUTO-VERIFY if token is in URL
@@ -323,7 +317,7 @@ function ScannerContent() {
                 ) : (
                   <>
                     <ScanLine className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                    {location ? t('open_camera') : t('retry_location')}
+                    {location && t('retry_location')}
                   </>
                 )}
               </button>

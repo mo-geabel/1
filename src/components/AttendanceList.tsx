@@ -40,11 +40,12 @@ export default function AttendanceList({ initialRecords, eventTitle, eventId }: 
 
   const exportToExcel = () => {
     const dataToExport = initialRecords.map((record) => ({
-      'Name': `${record.participant.name} ${record.participant.surname}`,
-      'Email': record.participant.email,
-      'Phone': record.participant.phone,
-      'Status': record.id ? (['VALID', 'EXTRA'].includes(record.status) ? 'PRESENT' : record.status) : 'ABSENT',
-      'Check-in Time': record.timestamp ? new Date(record.timestamp).toLocaleString() : '---',
+      [t('participant_label')]: `${record.participant.name} ${record.participant.surname}`,
+      [t('email_label')]: record.participant.email,
+      [t('phone_label')]: record.participant.phone || '---',
+      [t('registration_type')]: record.participant.isRegistered ? t('pre_registered') : t('walk_in'),
+      [t('status_label')]: record.id ? (['VALID', 'EXTRA'].includes(record.status) ? t('status_present') : record.status) : t('status_absent'),
+      [t('checkin_time_label')]: record.timestamp ? new Date(record.timestamp).toLocaleString() : '---',
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -97,6 +98,7 @@ export default function AttendanceList({ initialRecords, eventTitle, eventId }: 
               <tr className="border-b border-border-color text-gray-500 text-[10px] uppercase tracking-[0.2em] font-bold bg-card-bg/20">
                 <th className="px-10 py-6">{t('participant_label')}</th>
                 <th className="px-8 py-6">{t('phone_label')}</th>
+                <th className="px-8 py-6">{t('registration_type')}</th>
                 <th className="px-8 py-6">{t('status_label')}</th>
                 <th className="px-8 py-6">{t('checkin_time_label')}</th>
                 <th className="px-8 py-6 text-center">{t('actions_label')}</th>
@@ -131,14 +133,25 @@ export default function AttendanceList({ initialRecords, eventTitle, eventId }: 
                       </div>
                     </td>
                     <td className="px-8 py-6">
+                      {record.participant.isRegistered ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/5 text-primary border border-primary/20 uppercase tracking-wider">
+                          {t('pre_registered')}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-500/10 text-green-500 border border-green-500/20 uppercase tracking-wider">
+                          {t('walk_in')}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-8 py-6">
                       {record.id ? (
                         record.status === 'VALID' ? (
-                          <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-500/10 text-green-500 border border-green-500/20 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                          <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-[10px] font-bold uppercase tracking-wider">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             {t('status_present')}
                           </div>
                         ) : record.status === 'EXTRA' ? (
-                          <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                          <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-500/10 text-green-500 border border-green-500/20 rounded-full text-[10px] font-bold uppercase tracking-wider">
                             <Users className="w-3.5 h-3.5" />
                             {t('status_extra')}
                           </div>
@@ -242,14 +255,22 @@ export default function AttendanceList({ initialRecords, eventTitle, eventId }: 
 
               <div className="flex items-center justify-between pt-3 border-t border-border-color/50">
                 <div className="flex flex-col gap-1">
+                  <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">{t('registration_type')}</span>
+                  {record.participant.isRegistered ? (
+                    <span className="text-primary text-[10px] font-bold uppercase">{t('pre_registered')}</span>
+                  ) : (
+                    <span className="text-green-500 text-[10px] font-bold uppercase">{t('walk_in')}</span>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1 items-end">
                   <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">{t('status_label')}</span>
                   {record.id ? (
                     record.status === 'VALID' ? (
-                      <span className="text-green-500 text-[10px] font-bold flex items-center gap-1">
+                      <span className="text-primary text-[10px] font-bold flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3" /> {t('status_present')}
                       </span>
                     ) : record.status === 'EXTRA' ? (
-                      <span className="text-primary text-[10px] font-bold flex items-center gap-1">
+                      <span className="text-green-500 text-[10px] font-bold flex items-center gap-1">
                         <Users className="w-3 h-3" /> {t('status_extra')}
                       </span>
                     ) : (

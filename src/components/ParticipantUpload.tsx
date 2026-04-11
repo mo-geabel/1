@@ -122,13 +122,6 @@ export default function ParticipantUpload({ eventId }: ParticipantUploadProps) {
             <p className="text-gray-500 text-sm font-medium">Upload Excel/CSV to enroll participants before the event.</p>
           </div>
         </div>
-        <button 
-          onClick={downloadTemplate}
-          className="flex items-center gap-2 text-xs font-bold text-primary hover:text-primary-hover transition-colors uppercase tracking-widest bg-primary/5 px-4 py-2 rounded-xl border border-primary/10"
-        >
-          <Download className="w-4 h-4" />
-          Download Template
-        </button>
       </div>
 
       <div className="flex flex-col sm:flex-row items-stretch gap-4">
