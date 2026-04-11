@@ -7,8 +7,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, RefreshCw, Clock, ArrowLeft, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { useLanguage } from '@/components/LanguageContext';
 
 export default function EventQrPage({ params }: { params: Promise<{ eventId: string }> }) {
+  const { t } = useLanguage();
   const { eventId } = use(params);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
