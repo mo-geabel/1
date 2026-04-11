@@ -3,15 +3,19 @@
 :root {
   --background: #ffffff;
   --foreground: #0a0a0b;
-  --card-bg: #f5f5f7;
-  --border-color: #e5e7eb;
+  --card-bg: #f8f9fc;
+  --border-color: #e2e8f0;
+  --primary: #7152fa;
+  --primary-hover: #5d44d6;
 }
 
 .dark {
-  --background: #0a0a0b;
-  --foreground: #ffffff;
-  --card-bg: #161618;
-  --border-color: #1f1f23;
+  --background: #020203;
+  --foreground: #f8fafc;
+  --card-bg: #09090b;
+  --border-color: #1a1a1e;
+  --primary: #7152fa;
+  --primary-hover: #8b71ff;
 }
 
 @theme inline {
@@ -19,6 +23,8 @@
   --color-foreground: var(--foreground);
   --color-card-bg: var(--card-bg);
   --color-border-color: var(--border-color);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
 }
 
 body {

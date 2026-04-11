@@ -13,6 +13,16 @@ export default function EventQrPage({ params }: { params: Promise<{ eventId: str
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState(60);
+  const [qrSize, setQrSize] = useState(200);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setQrSize(window.innerWidth < 768 ? 180 : 220);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const refreshToken = async () => {
     try {
@@ -49,7 +59,7 @@ export default function EventQrPage({ params }: { params: Promise<{ eventId: str
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 lg:p-12 relative overflow-hidden transition-colors duration-300">
       {/* Background decoration */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="absolute top-8 left-8 flex items-center gap-4">
         <Link 
@@ -65,21 +75,21 @@ export default function EventQrPage({ params }: { params: Promise<{ eventId: str
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="max-w-2xl w-full"
+        className="max-w-xl w-full"
       >
-        <div className="bg-card-bg/60 backdrop-blur-3xl border border-border-color rounded-[3rem] overflow-hidden p-10 lg:p-16 text-center shadow-2xl relative">
-          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent opacity-50" />
+        <div className="bg-card-bg/60 backdrop-blur-3xl border border-border-color rounded-[2.5rem] overflow-hidden p-8 lg:p-12 text-center shadow-2xl relative">
+          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-50" />
           
           <div className="mb-10">
             <h1 className="text-3xl font-bold tracking-tight text-foreground mb-2">Live Attendance System</h1>
             <p className="text-gray-500 text-sm font-medium">Scan the QR code below to record your participation.</p>
           </div>
 
-          <div className="relative inline-block p-12 bg-white rounded-[2.5rem] shadow-[0_0_80px_rgba(0,0,0,0.05)] border-4 border-border-color">
+          <div className="relative inline-block p-8 md:p-10 bg-white rounded-[2rem] shadow-[0_0_80px_rgba(0,0,0,0.05)] border-4 border-border-color">
             <AnimatePresence mode="wait">
               {loading && !token ? (
-                <div key="loader" className="w-[280px] h-[280px] flex items-center justify-center bg-gray-50 rounded-2xl">
-                  <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
+                <div key="loader" className="w-[180px] h-[180px] md:w-[220px] md:h-[220px] flex items-center justify-center bg-gray-50 rounded-2xl">
+                  <Loader2 className="w-12 h-12 text-primary animate-spin" />
                 </div>
               ) : (
                 <motion.div
@@ -91,7 +101,7 @@ export default function EventQrPage({ params }: { params: Promise<{ eventId: str
                 >
                   <QRCodeSVG 
                     value={scanUrl} 
-                    size={280} 
+                    size={qrSize} 
                     fgColor="#000"
                     bgColor="#fff"
                     includeMargin={false}
@@ -102,15 +112,15 @@ export default function EventQrPage({ params }: { params: Promise<{ eventId: str
             </AnimatePresence>
             
             {/* Corner decorations for QR container */}
-            <div className="absolute top-4 left-4 w-8 h-8 rounded-tl-3xl border-t-4 border-l-4 border-blue-600" />
-            <div className="absolute top-4 right-4 w-8 h-8 rounded-tr-3xl border-t-4 border-r-4 border-blue-600" />
-            <div className="absolute bottom-4 left-4 w-8 h-8 rounded-bl-3xl border-b-4 border-l-4 border-blue-600" />
-            <div className="absolute bottom-4 right-4 w-8 h-8 rounded-br-3xl border-b-4 border-r-4 border-blue-600" />
+            <div className="absolute top-4 left-4 w-8 h-8 rounded-tl-3xl border-t-4 border-l-4 border-primary" />
+            <div className="absolute top-4 right-4 w-8 h-8 rounded-tr-3xl border-t-4 border-r-4 border-primary" />
+            <div className="absolute bottom-4 left-4 w-8 h-8 rounded-bl-3xl border-b-4 border-l-4 border-primary" />
+            <div className="absolute bottom-4 right-4 w-8 h-8 rounded-br-3xl border-b-4 border-r-4 border-primary" />
           </div>
 
           <div className="mt-12 space-y-6">
             {/* Timer */}
-            <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-500 font-bold tracking-widest text-lg shadow-sm">
+            <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-primary/10 border border-primary/20 text-primary font-bold tracking-widest text-lg shadow-sm">
               <Clock className="w-5 h-5" />
               00:{timeLeft.toString().padStart(2, '0')}
             </div>

@@ -18,7 +18,7 @@ export function ThemeToggle() {
   return (
     <button
       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      className="relative p-3 rounded-2xl bg-card-bg/50 backdrop-blur-xl border border-border-color hover:border-blue-500/50 transition-all group overflow-hidden"
+      className="relative p-3 rounded-2xl bg-card-bg/50 backdrop-blur-xl border border-border-color hover:border-primary/50 transition-all group overflow-hidden"
       aria-label="Toggle Theme"
     >
       <AnimatePresence mode="wait">
@@ -30,7 +30,7 @@ export function ThemeToggle() {
             exit={{ y: -20, opacity: 0, rotate: 45 }}
             transition={{ duration: 0.2 }}
           >
-            <Moon className="w-5 h-5 text-blue-400 group-hover:scale-110 transition-transform" />
+            <Moon className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
           </motion.div>
         ) : (
           <motion.div
@@ -46,7 +46,7 @@ export function ThemeToggle() {
       </AnimatePresence>
       
       {/* Subtle hover sparkle */}
-      <div className="absolute inset-0 bg-blue-500/0 group-hover:bg-blue-500/5 transition-colors pointer-events-none" />
+      <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/5 transition-colors pointer-events-none" />
     </button>
   );
 }

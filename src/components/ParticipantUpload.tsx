@@ -111,20 +111,20 @@ export default function ParticipantUpload({ eventId }: ParticipantUploadProps) {
   };
 
   return (
-    <div className="bg-card-bg/40 border border-border-color rounded-[2.5rem] p-8 shadow-sm">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8">
+    <div className="bg-card-bg/40 border border-border-color rounded-[2.5rem] p-5 md:p-8 shadow-sm">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-4 md:mb-8">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-blue-500/10 rounded-2xl border border-blue-500/10 text-blue-500">
+          <div className="p-3 bg-primary/10 rounded-2xl border border-primary/10 text-primary">
             <Table className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-xl font-bold">Pre-register Participants</h3>
+            <h3 className="text-lg md:text-xl font-bold">Pre-register Participants</h3>
             <p className="text-gray-500 text-sm font-medium">Upload Excel/CSV to enroll participants before the event.</p>
           </div>
         </div>
         <button 
           onClick={downloadTemplate}
-          className="flex items-center gap-2 text-xs font-bold text-blue-500 hover:text-blue-400 transition-colors uppercase tracking-widest bg-blue-500/5 px-4 py-2 rounded-xl border border-blue-500/10"
+          className="flex items-center gap-2 text-xs font-bold text-primary hover:text-primary-hover transition-colors uppercase tracking-widest bg-primary/5 px-4 py-2 rounded-xl border border-primary/10"
         >
           <Download className="w-4 h-4" />
           Download Template
@@ -133,7 +133,7 @@ export default function ParticipantUpload({ eventId }: ParticipantUploadProps) {
 
       <div className="flex flex-col sm:flex-row items-stretch gap-4">
         <div 
-          className={`flex-1 relative border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-6 transition-all cursor-pointer ${file ? 'border-blue-500/50 bg-blue-500/5' : 'border-border-color hover:border-gray-400'}`}
+          className={`flex-1 relative border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-4 md:p-6 transition-all cursor-pointer ${file ? 'border-primary/50 bg-primary/5' : 'border-border-color hover:border-gray-400'}`}
           onClick={() => fileInputRef.current?.click()}
         >
           <input 
@@ -145,7 +145,7 @@ export default function ParticipantUpload({ eventId }: ParticipantUploadProps) {
           />
           {file ? (
             <div className="flex items-center gap-3">
-              <FileText className="w-8 h-8 text-blue-500" />
+              <FileText className="w-8 h-8 text-primary" />
               <div className="text-left">
                 <p className="text-sm font-bold truncate max-w-[200px]">{file.name}</p>
                 <p className="text-[10px] text-gray-500 uppercase font-black">{(file.size / 1024).toFixed(1)} KB</p>
@@ -162,7 +162,7 @@ export default function ParticipantUpload({ eventId }: ParticipantUploadProps) {
         <button
           onClick={processFile}
           disabled={!file || loading}
-          className="sm:w-48 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 text-white font-bold rounded-2xl transition-all shadow-lg shadow-blue-600/10 flex items-center justify-center gap-3 active:scale-[0.98]"
+          className="sm:w-48 bg-primary hover:bg-primary-hover disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 text-white font-bold rounded-2xl py-4 sm:py-0 transition-all shadow-lg shadow-primary/10 flex items-center justify-center gap-3 active:scale-[0.98]"
         >
           {loading ? (
             <Loader2 className="w-5 h-5 animate-spin" />

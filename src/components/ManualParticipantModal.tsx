@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, User, Mail, Phone, Loader2, Save, Trash2, AlertCircle } from 'lucide-react';
 import { addParticipantAction, updateParticipantAction, deleteParticipantAction } from '@/actions/participants';
 import { toast } from 'react-hot-toast';
+import { useLanguage } from './LanguageContext';
 
 interface ManualParticipantModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ interface ManualParticipantModalProps {
 }
 
 export default function ManualParticipantModal({ isOpen, onClose, eventId, participant, mode }: ManualParticipantModalProps) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -66,13 +68,13 @@ export default function ManualParticipantModal({ isOpen, onClose, eventId, parti
       }
 
       if (result?.success) {
-        toast.success(mode === 'add' ? 'Participant added successfully' : 'Participant updated successfully');
+        toast.success(mode === 'add' ? t('participant_added') : t('participant_updated'));
         onClose();
       } else {
-        setError(result?.error || 'An error occurred');
+        setError(result?.error || t('error_occurred'));
       }
     } catch (err) {
-      setError('Failed to save participant');
+      setError(t('failed_save_participant'));
     } finally {
       setLoading(false);
     }
@@ -85,13 +87,13 @@ export default function ManualParticipantModal({ isOpen, onClose, eventId, parti
     try {
       const result = await deleteParticipantAction(participant.id, eventId);
       if (result.success) {
-        toast.success('Participant deleted successfully');
+        toast.success(t('participant_deleted'));
         onClose();
       } else {
-        setError(result.error || 'Failed to delete');
+        setError(result.error || t('failed_delete'));
       }
     } catch (err) {
-      setError('Failed to delete participant');
+      setError(t('failed_delete_participant'));
     } finally {
       setLoading(false);
     }
@@ -113,15 +115,15 @@ export default function ManualParticipantModal({ isOpen, onClose, eventId, parti
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-card-bg border border-border-color rounded-[2.5rem] shadow-2xl overflow-hidden p-8"
+              className="relative w-full max-w-md bg-card-bg border border-border-color rounded-3xl shadow-2xl overflow-hidden p-8"
             >
               <div className="flex flex-col items-center text-center space-y-4">
-                <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center border border-red-500/20">
+                <div className="w-16 h-16 bg-red-500/10 rounded-xl flex items-center justify-center border border-red-500/20">
                   <Trash2 className="w-8 h-8 text-red-500" />
                 </div>
-                <h2 className="text-2xl font-bold text-foreground">Delete Participant?</h2>
+                <h2 className="text-2xl font-bold text-foreground">{t('delete_participant_q')}</h2>
                 <p className="text-gray-500 text-sm">
-                  Are you sure you want to remove <span className="font-bold text-foreground">{participant?.name} {participant?.surname}</span>? This will also delete any associated attendance records.
+                  {t('delete_participant_confirm')} <span className="font-bold text-foreground">{participant?.name} {participant?.surname}</span>? {t('delete_associated_data')}
                 </p>
                 {error && (
                   <div className="w-full p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold">
@@ -131,16 +133,16 @@ export default function ManualParticipantModal({ isOpen, onClose, eventId, parti
                 <div className="w-full flex gap-4 pt-4">
                   <button
                     onClick={onClose}
-                    className="flex-1 py-4 rounded-2xl font-bold text-gray-500 border border-border-color hover:bg-gray-500/5 transition-all"
+                    className="flex-1 py-4 rounded-xl font-bold text-gray-500 border border-border-color hover:bg-gray-500/5 transition-all text-xs uppercase tracking-widest"
                   >
-                    Cancel
+                    {t('cancel')}
                   </button>
                   <button
                     onClick={handleDelete}
                     disabled={loading}
-                    className="flex-1 bg-red-600 hover:bg-red-500 py-4 rounded-2xl font-bold text-white transition-all shadow-xl shadow-red-600/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="flex-1 bg-red-600 hover:bg-red-500 py-4 rounded-xl font-bold text-white transition-all shadow-xl shadow-red-600/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 text-xs uppercase tracking-widest"
                   >
-                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Delete Item'}
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : t('delete_item')}
                   </button>
                 </div>
               </div>
@@ -167,18 +169,18 @@ export default function ManualParticipantModal({ isOpen, onClose, eventId, parti
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-xl bg-card-bg border border-border-color rounded-[2.5rem] shadow-2xl overflow-hidden"
+            className="relative w-full max-w-xl bg-card-bg border border-border-color rounded-3xl shadow-2xl overflow-hidden"
           >
             <div className="p-8 border-b border-border-color flex justify-between items-center bg-card-bg/50">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center border border-blue-500/20">
-                  <User className="w-6 h-6 text-blue-500" />
+                <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
+                  <User className="w-6 h-6 text-primary" />
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-foreground">
-                    {mode === 'add' ? 'Add Participant' : 'Update Participant'}
+                    {mode === 'add' ? t('add_participant') : t('update_participant')}
                   </h2>
-                  <p className="text-gray-500 text-sm">Enter the details below.</p>
+                  <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1">{t('enter_details')}</p>
                 </div>
               </div>
               <button 
@@ -192,10 +194,10 @@ export default function ManualParticipantModal({ isOpen, onClose, eventId, parti
             <form onSubmit={handleSubmit} className="p-8 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest pl-1">First Name</label>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] pl-1">{t('first_name')}</label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <User className="w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                      <User className="w-5 h-5 text-gray-400 group-focus-within:text-primary transition-colors" />
                     </div>
                     <input
                       name="name"
@@ -203,16 +205,16 @@ export default function ManualParticipantModal({ isOpen, onClose, eventId, parti
                       value={formData.name}
                       onChange={handleChange}
                       placeholder="e.g. John"
-                      className="w-full pl-12 pr-4 py-4 bg-background border border-border-color rounded-2xl text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all font-medium text-sm shadow-sm"
+                      className="w-full pl-12 pr-4 py-4 bg-background border border-border-color rounded-xl text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all font-bold text-sm shadow-sm"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest pl-1">Last Name</label>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] pl-1">{t('last_name')}</label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <User className="w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                      <User className="w-5 h-5 text-gray-400 group-focus-within:text-primary transition-colors" />
                     </div>
                     <input
                       name="surname"
@@ -220,16 +222,16 @@ export default function ManualParticipantModal({ isOpen, onClose, eventId, parti
                       value={formData.surname}
                       onChange={handleChange}
                       placeholder="e.g. Doe"
-                      className="w-full pl-12 pr-4 py-4 bg-background border border-border-color rounded-2xl text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all font-medium text-sm shadow-sm"
+                      className="w-full pl-12 pr-4 py-4 bg-background border border-border-color rounded-xl text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all font-bold text-sm shadow-sm"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest pl-1">Email Address</label>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] pl-1">{t('email_label')}</label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Mail className="w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                      <Mail className="w-5 h-5 text-gray-400 group-focus-within:text-primary transition-colors" />
                     </div>
                     <input
                       name="email"
@@ -237,24 +239,24 @@ export default function ManualParticipantModal({ isOpen, onClose, eventId, parti
                       required
                       value={formData.email}
                       onChange={handleChange}
-                      placeholder="e.g. john@example.com"
-                      className="w-full pl-12 pr-4 py-4 bg-background border border-border-color rounded-2xl text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all font-medium text-sm shadow-sm"
+                      placeholder="e.g. john@safespeech.com.tr"
+                      className="w-full pl-12 pr-4 py-4 bg-background border border-border-color rounded-xl text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all font-bold text-sm shadow-sm"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest pl-1">Phone Number (Optional)</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] pl-1">{t('phone_label')} ({t('optional')})</label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Phone className="w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                      <Phone className="w-5 h-5 text-gray-400 group-focus-within:text-primary transition-colors" />
                     </div>
                     <input
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
-                      placeholder="e.g. +1 234 567 890"
-                      className="w-full pl-12 pr-4 py-4 bg-background border border-border-color rounded-2xl text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all font-medium text-sm shadow-sm"
+                      placeholder="e.g. +90 XXX XXX XX XX"
+                      className="w-full pl-12 pr-4 py-4 bg-background border border-border-color rounded-xl text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all font-bold text-sm shadow-sm"
                     />
                   </div>
                 </div>
@@ -271,16 +273,16 @@ export default function ManualParticipantModal({ isOpen, onClose, eventId, parti
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 py-4 rounded-2xl font-bold text-gray-500 border border-border-color hover:bg-gray-500/5 transition-all"
+                  className="flex-1 py-4 rounded-xl font-bold text-gray-500 border border-border-color hover:bg-gray-500/5 transition-all text-xs uppercase tracking-widest"
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-2 bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl font-bold text-white transition-all shadow-xl shadow-blue-600/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
+                  className="flex-2 bg-primary hover:bg-primary-hover py-4 rounded-xl font-bold text-white transition-all shadow-xl shadow-primary/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 text-xs uppercase tracking-widest"
                 >
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-5 h-5" /> {mode === 'add' ? 'Add Participant' : 'Save Changes'}</>}
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-5 h-5" /> {mode === 'add' ? t('add_participant') : t('save_details')}</>}
                 </button>
               </div>
             </form>

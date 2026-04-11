@@ -49,8 +49,8 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
             {/* Header */}
             <div className="p-8 border-b border-border-color flex justify-between items-center bg-card-bg/50">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center border border-blue-500/20">
-                  <Calendar className="w-6 h-6 text-blue-500" />
+                <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20">
+                  <Calendar className="w-6 h-6 text-primary" />
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-foreground">Create New Event</h2>
@@ -72,13 +72,13 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-widest pl-1">Event Title</label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Type className="w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                      <Type className="w-5 h-5 text-gray-400 group-focus-within:text-primary transition-colors" />
                     </div>
                     <input
                       name="title"
                       required
                       placeholder="e.g. Clinical Medicine Workshop"
-                      className="w-full pl-12 pr-4 py-4 bg-background border border-border-color rounded-2xl text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all font-medium text-sm shadow-sm"
+                      className="w-full pl-12 pr-4 py-4 bg-background border border-border-color rounded-2xl text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all font-medium text-sm shadow-sm"
                     />
                   </div>
                 </div>
@@ -88,13 +88,13 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-widest pl-1">Description (Optional)</label>
                   <div className="relative group">
                     <div className="absolute top-4 left-4 flex items-start pointer-events-none">
-                      <AlignLeft className="w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                      <AlignLeft className="w-5 h-5 text-gray-400 group-focus-within:text-primary transition-colors" />
                     </div>
                     <textarea
                       name="description"
                       rows={3}
                       placeholder="Session goals and topics..."
-                      className="w-full pl-12 pr-4 py-4 bg-background border border-border-color rounded-2xl text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all font-medium text-sm shadow-sm resize-none"
+                      className="w-full pl-12 pr-4 py-4 bg-background border border-border-color rounded-2xl text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all font-medium text-sm shadow-sm resize-none"
                     />
                   </div>
                 </div>
@@ -106,7 +106,7 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
                     name="date"
                     type="datetime-local"
                     required
-                    className="w-full px-4 py-4 bg-background border border-border-color rounded-2xl text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all font-medium text-sm shadow-sm [color-scheme:light] dark:[color-scheme:dark]"
+                    className="w-full px-4 py-4 bg-background border border-border-color rounded-2xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all font-medium text-sm shadow-sm [color-scheme:light] dark:[color-scheme:dark]"
                   />
                 </div>
 
@@ -115,13 +115,13 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-widest pl-1">Verification Radius (m)</label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Target className="w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                      <Target className="w-5 h-5 text-gray-400 group-focus-within:text-primary transition-colors" />
                     </div>
                     <input
                       name="radius"
                       type="number"
                       defaultValue={200}
-                      className="w-full pl-12 pr-4 py-4 bg-background border border-border-color rounded-2xl text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all font-medium text-sm shadow-sm"
+                      className="w-full pl-12 pr-4 py-4 bg-background border border-border-color rounded-2xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all font-medium text-sm shadow-sm"
                     />
                   </div>
                 </div>
@@ -135,7 +135,7 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
                     step="any"
                     required
                     placeholder="e.g. 41.0082"
-                    className="w-full px-4 py-4 bg-background border border-border-color rounded-2xl text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all font-medium text-sm shadow-sm"
+                    className="w-full px-4 py-4 bg-background border border-border-color rounded-2xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all font-medium text-sm shadow-sm"
                   />
                 </div>
 
@@ -147,7 +147,7 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
                     step="any"
                     required
                     placeholder="e.g. 28.9784"
-                    className="w-full px-4 py-4 bg-background border border-border-color rounded-2xl text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all font-medium text-sm shadow-sm"
+                    className="w-full px-4 py-4 bg-background border border-border-color rounded-2xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all font-medium text-sm shadow-sm"
                   />
                 </div>
               </div>
@@ -169,7 +169,7 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-[2] bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl font-bold text-white transition-all shadow-xl shadow-blue-600/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
+                  className="flex-[2] bg-primary hover:bg-primary-hover py-4 rounded-2xl font-bold text-white transition-all shadow-xl shadow-primary/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
                 >
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-5 h-5" /> Save Session</>}
                 </button>
@@ -177,8 +177,8 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
             </form>
 
             {/* Helper tip */}
-            <div className="p-8 bg-blue-500/5 border-t border-border-color flex items-start gap-3">
-              <MapIcon className="w-5 h-5 text-blue-500 mt-0.5" />
+            <div className="p-8 bg-primary/5 border-t border-border-color flex items-start gap-3">
+              <MapIcon className="w-5 h-5 text-primary mt-0.5" />
               <p className="text-gray-500 text-[10px] leading-relaxed font-medium uppercase tracking-wider">
                 Tip: Use Google Maps to find your exact coordinates. Right-click any location on the map to see its Latitude and Longitude.
               </p>

@@ -6,16 +6,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Camera, MapPin, Loader2, CheckCircle2, 
   XCircle, UserPlus, Info, RefreshCw, 
-  ChevronRight, Mail, User, Smartphone, Sparkles,
-  Search, ArrowRight, ShieldCheck
+  ChevronRight, Mail, User, Smartphone, 
+  Search, ArrowRight, ShieldCheck, Building2,
+  ScanLine, UserCheck
 } from 'lucide-react';
 import { checkInAction, validateScanAction, lookupParticipantAction } from '@/actions/attendance';
 import { useSearchParams } from 'next/navigation';
+import { useLanguage } from './LanguageContext';
 import toast from 'react-hot-toast';
 
 type ScannerStatus = 'idle' | 'scanning' | 'verifying' | 'ask-email' | 'searching' | 'register' | 'success' | 'error';
 
 function ScannerContent() {
+  const { t } = useLanguage();
   const searchParams = useSearchParams();
   const tokenFromUrl = searchParams.get('token');
   
@@ -37,40 +40,68 @@ function ScannerContent() {
 
   const scannerRef = useRef<Html5Qrcode | null>(null);
 
-  const fetchLocation = () => {
+  const fetchLocation = async (isRetry = false) => {
     if (typeof window === 'undefined') return;
     setError(null);
 
+    // Permission API check
+    if (navigator.permissions && navigator.permissions.query) {
+      try {
+        const status = await navigator.permissions.query({ name: 'geolocation' });
+        console.log('Browser Permission Status:', status.state);
+        status.onchange = () => console.log('Permission changed to:', status.state);
+      } catch (e) {
+        console.warn('Permissions query not supported');
+      }
+    }
+
     // Security context check
-    if (!window.isSecureContext && window.location.hostname !== 'localhost') {
-      setError('Security Error: Geolocation requires HTTPS. Please ensure you are using a secure connection.');
+    const isIP = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(window.location.hostname);
+    if (!window.isSecureContext && window.location.hostname !== 'localhost' && !isIP) {
+      const msg = 'Security Error: Geolocation requires HTTPS. This browser blocks location on insecure connections.';
+      console.error(msg);
+      setError(msg);
       return;
     }
 
     if ('geolocation' in navigator) {
+      const options = { 
+        enableHighAccuracy: !isRetry, 
+        timeout: 12000, 
+        maximumAge: isRetry ? 60000 : 0 
+      };
+      
+      console.log(`Requesting location (High accuracy: ${!isRetry})...`);
+      
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          console.log('Location success:', pos.coords.latitude, pos.coords.longitude);
           setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
           setError(null);
         },
         (err) => {
-          console.error('Location error:', err);
-          let msg = 'Location access failed. ';
-          if (err.code === 1) msg += 'Please enable location permissions in your browser settings.';
-          else if (err.code === 2) msg += 'Position unavailable. Try moving to a clearer area.';
-          else if (err.code === 3) msg += 'Request timed out. Please try again.';
-          else msg += err.message;
-          setError(msg);
+          const errCode = err?.code;
+          const errMsg = err?.message || 'No specific error message provided';
+          
+          // Fallback logic
+          if (!isRetry && (errCode === 2 || errCode === 3 || errCode === undefined)) {
+            console.warn('High-accuracy GPS failed, trying Wi-Fi/Cell fallback...');
+            fetchLocation(true);
+            return;
+          }
+
+          let msg = '';
+          if (errCode === 1) msg = 'Location Permission Denied. Please check your phone settings.';
+          else if (errCode === 2) msg = 'Position Unavailable. Move to an area with better signal.';
+          else if (errCode === 3) msg = 'Request Timed Out. Your GPS is taking too long to respond.';
+          else msg = errMsg;
+          
+          // Add technical details for on-screen debugging
+          setError(`${msg} (Error Code: ${errCode || '?'})`);
         },
-        { 
-          enableHighAccuracy: true, 
-          timeout: 20000, 
-          maximumAge: 30000 // Allow 30s old cached position
-        }
+        options
       );
     } else {
-      setError('Geolocation is not supported by your browser.');
+      setError('Geolocation is not supported by this browser.');
     }
   };
 
@@ -103,7 +134,7 @@ function ScannerContent() {
       setStatus('ask-email');
     } else {
       setStatus('error');
-      setError(result.error || 'Verification failed.');
+      setError(result.error || t('auth_failed'));
     }
     setLoading(false);
   };
@@ -119,9 +150,9 @@ function ScannerContent() {
     const result = await lookupParticipantAction(email, sessionToken);
 
     if (result.error) {
-      toast.error(result.error);
+      toast.error(result.error === 'Invalid email or password.' ? t('invalid_credentials') : (result.error || t('auth_failed')));
       setStatus('error');
-      setError(result.error);
+      setError(result.error === 'Invalid email or password.' ? t('invalid_credentials') : (result.error || t('auth_failed')));
     } else if (result.recognized) {
       // AUTOMATIC CHECK-IN for recognized users
       const checkInResult = await checkInAction({
@@ -141,7 +172,7 @@ function ScannerContent() {
         setStatus('success');
       } else {
         setStatus('error');
-        setError(checkInResult.error || 'Check-in failed.');
+        setError(checkInResult.error || t('auth_failed'));
       }
     } else {
       // NEW USER: Transition to full registration
@@ -170,7 +201,7 @@ function ScannerContent() {
       setUserName(`${regData.firstName} ${regData.lastName}`);
       setStatus('success');
     } else {
-      toast.error(result.error || 'Registration failed.');
+      toast.error(result.error || t('auth_failed'));
     }
     setLoading(false);
   };
@@ -187,7 +218,7 @@ function ScannerContent() {
       
       const config = {
         fps: 10,
-        qrbox: { width: 250, height: 250 },
+        qrbox: { width: 220, height: 220 },
         aspectRatio: 1.0
       };
 
@@ -211,7 +242,7 @@ function ScannerContent() {
         },
         (errorMessage) => {}
       ).catch((err) => {
-        setError('Camera blocked. Please check permissions.');
+        setError(t('camera_blocked'));
         setStatus('error');
       });
       
@@ -237,18 +268,18 @@ function ScannerContent() {
 
   if (status === 'success') {
     return (
-      <div className="w-full max-w-lg bg-card-bg/60 backdrop-blur-3xl border border-border-color p-12 rounded-4xl text-center shadow-2xl relative overflow-hidden group">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/5 rounded-full blur-3xl pointer-events-none" />
-        <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-6 group-hover:scale-110 transition-transform" />
-        <h2 className="text-2xl font-black text-foreground mb-2 tracking-tight">Access Granted!</h2>
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-green-500/10 text-green-500 border border-green-500/20 rounded-full text-[10px] font-black uppercase tracking-widest mb-6">
-          <Sparkles className="w-3 h-3" />
-          Welcome, {userName}
+      <div className="w-full max-w-lg bg-card-bg/60 backdrop-blur-3xl border border-border-color p-12 rounded-3xl text-center shadow-2xl relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+        <CheckCircle2 className="w-16 h-16 text-primary mx-auto mb-6 group-hover:scale-110 transition-transform" />
+        <h2 className="text-2xl font-bold text-foreground mb-2 tracking-tight">{t('access_granted')}</h2>
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full text-[10px] font-bold uppercase tracking-widest mb-6">
+          <UserCheck className="w-3 h-3" />
+          {t('welcome_user')}, {userName}
         </div>
         <p className="text-gray-500 text-sm font-medium mb-10 leading-relaxed px-4">
-          Your presence has been successfully recorded for:
+          {t('presence_recorded_for')}
         </p>
-        <div className="p-6 bg-card-bg border border-border-color rounded-3xl font-black text-lg shadow-sm group-hover:border-green-500/40 transition-colors">
+        <div className="p-6 bg-card-bg border border-border-color rounded-2xl font-bold text-lg shadow-sm group-hover:border-primary/40 transition-colors mb-8 text-primary">
           {eventTitle}
         </div>
       </div>
@@ -264,14 +295,14 @@ function ScannerContent() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="bg-card-bg/60 backdrop-blur-3xl border border-border-color p-10 rounded-4xl text-center shadow-2xl w-full"
+            className="bg-card-bg/60 backdrop-blur-3xl border border-border-color p-10 rounded-3xl text-center shadow-2xl w-full"
           >
-            <div className="w-20 h-20 bg-blue-500/10 rounded-2xl flex items-center justify-center mx-auto mb-8 border border-blue-500/20 shadow-[0_0_40px_rgba(59,130,246,0.1)]">
-              <Camera className="w-10 h-10 text-blue-400" />
+            <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-8 border border-primary/20 shadow-[0_0_40px_rgba(113,82,250,0.1)]">
+              <ScanLine className="w-10 h-10 text-primary" />
             </div>
             
-            <h1 className="text-3xl font-extrabold text-foreground tracking-tight leading-tight">Welcome to the Event Portal</h1>
-            <p className="text-gray-500 mt-4 text-sm leading-relaxed mb-10">Scan the QR code displayed at the event entrance to mark your presence.</p>
+            <h1 className="text-3xl font-bold text-foreground tracking-tight leading-tight">{t('scanner_welcome')}</h1>
+            <p className="text-gray-500 mt-4 text-sm leading-relaxed mb-10 font-medium">{t('scanner_desc')}</p>
             
             <div className="space-y-4">
               <button 
@@ -282,41 +313,57 @@ function ScannerContent() {
                     startScanner();
                   }
                 }}
-                className="w-full bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 py-4 rounded-2xl font-bold text-white transition-all shadow-xl shadow-blue-600/20 active:scale-[0.98] group flex items-center justify-center gap-3"
+                className="w-full bg-primary hover:bg-primary/90 py-4 rounded-xl font-bold text-white transition-all shadow-xl shadow-primary/20 active:scale-[0.98] group flex items-center justify-center gap-3"
               >
                 {!location && !error ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Verify Location to Start
+                    {t('verify_location')}
                   </>
                 ) : (
                   <>
-                    <Camera className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                    {location ? 'Open Camera Scanner' : 'Retry Location Access'}
+                    <ScanLine className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                    {location ? t('open_camera') : t('retry_location')}
                   </>
                 )}
               </button>
               
               {error && (
-                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex flex-col gap-3 text-left">
+                <div className="p-4 bg-red-500/5 border border-red-500/10 rounded-xl flex flex-col gap-3 text-left">
                   <div className="flex gap-3">
                     <XCircle className="w-5 h-5 text-red-500 shrink-0" />
-                    <p className="text-red-500 text-xs leading-relaxed font-medium">{error}</p>
+                    <p className="text-red-500 text-xs leading-relaxed font-bold">{error}</p>
                   </div>
-                  <button 
-                    onClick={() => fetchLocation()}
-                    className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-gray-500 hover:text-foreground transition-colors"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    Retry Location Check
-                  </button>
+                  <div className="flex flex-col gap-2">
+                    <button 
+                      onClick={() => fetchLocation()}
+                      className="flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold text-gray-400 hover:text-foreground transition-colors p-2"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      {t('retry_location')}
+                    </button>
+                    
+                    {(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (
+                      <button 
+                        onClick={() => {
+                          setLocation({ lat: 0, lng: 0 }); // Simulate location
+                          setError(null);
+                          toast.success('Location Bypassed (Dev Mode)');
+                        }}
+                        className="flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold text-white/40 hover:text-white transition-colors p-2 border border-white/10 rounded-xl bg-white/5"
+                      >
+                        <Info className="w-3 h-3" />
+                        Skip for Testing (Localhost Only)
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
 
               {location && (
-                <div className="flex items-center justify-center gap-2 text-[10px] font-bold text-green-500 uppercase tracking-widest">
-                  <MapPin className="w-3 h-3" />
-                  Location Secured
+                <div className="flex items-center justify-center gap-2 text-[10px] font-bold text-primary uppercase tracking-[0.2em]">
+                  <ShieldCheck className="w-3 h-3" />
+                  {t('location_secured')}
                 </div>
               )}
             </div>
@@ -329,7 +376,7 @@ function ScannerContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="relative overflow-hidden group rounded-4xl border border-border-color shadow-2xl"
+            className="relative overflow-hidden group rounded-3xl border border-border-color shadow-2xl"
           >
             <div 
               id="reader" 
@@ -338,15 +385,15 @@ function ScannerContent() {
             />
             <div className="absolute inset-0 pointer-events-none border-20 border-background/80" />
             
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] border-4 border-blue-500 rounded-3xl pointer-events-none">
-              <div className="absolute top-0 left-0 w-full h-[2px] bg-blue-400 animate-scan shadow-[0_0_15px_rgba(59,130,246,0.8)]" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[220px] h-[220px] border-2 border-primary rounded-2xl pointer-events-none">
+              <div className="absolute top-0 left-0 w-full h-[1px] bg-primary animate-scan shadow-[0_0_15px_rgba(113,82,250,0.8)]" />
             </div>
 
             <button 
               onClick={() => setStatus('idle')}
               className="absolute bottom-10 left-1/2 -translate-x-1/2 px-6 py-2.5 bg-red-500/80 hover:bg-red-500 rounded-xl text-white text-sm font-bold backdrop-blur-md transition-all shadow-xl shadow-red-500/20"
             >
-              Cancel
+              {t('scanning_cancel')}
             </button>
           </motion.div>
         )}
@@ -357,20 +404,20 @@ function ScannerContent() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="text-center p-12 bg-card-bg/60 backdrop-blur-3xl rounded-4xl border border-border-color shadow-2xl"
+            className="text-center p-12 bg-card-bg/60 backdrop-blur-3xl rounded-3xl border border-border-color shadow-2xl"
           >
             <div className="relative w-24 h-24 mx-auto mb-8">
-              <div className="absolute inset-0 border-4 border-blue-500/20 rounded-full" />
-              <div className="absolute inset-0 border-4 border-t-blue-500 rounded-full animate-spin" />
+              <div className="absolute inset-0 border-4 border-primary/20 rounded-full" />
+              <div className="absolute inset-0 border-4 border-t-primary rounded-full animate-spin" />
               <div className="absolute inset-0 flex items-center justify-center">
-                {status === 'verifying' ? <ShieldCheck className="w-8 h-8 text-blue-400" /> : <Search className="w-8 h-8 text-blue-400" />}
+                {status === 'verifying' ? <ShieldCheck className="w-8 h-8 text-primary" /> : <Search className="w-8 h-8 text-primary" />}
               </div>
             </div>
             <h2 className="text-2xl font-bold text-foreground mb-2 tracking-tight">
-              {status === 'verifying' ? 'Verifying Scan' : 'Identifying You'}
+              {status === 'verifying' ? t('verifying_scan') : t('identifying_you')}
             </h2>
             <p className="text-gray-500 leading-relaxed max-w-[200px] mx-auto text-sm">
-              {status === 'verifying' ? 'Validating QR and GPS coordinates.' : 'Searching for your registration record.'}
+              {status === 'verifying' ? t('verifying_scan_desc') : t('identifying_you_desc')}
             </p>
           </motion.div>
         )}
@@ -380,34 +427,34 @@ function ScannerContent() {
             key="ask-email"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="w-full bg-card-bg/60 backdrop-blur-3xl border border-border-color p-10 rounded-4xl shadow-2xl relative overflow-hidden"
+            className="w-full bg-card-bg/60 backdrop-blur-3xl border border-border-color p-10 rounded-3xl shadow-2xl relative overflow-hidden"
           >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
             <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
-                <Mail className="w-8 h-8 text-blue-500" />
+              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-primary/20">
+                <Mail className="w-8 h-8 text-primary" />
               </div>
-              <h2 className="text-2xl font-black text-foreground mb-1">Enter Your Email</h2>
-              <p className="text-gray-500 text-xs font-medium">Verify your identity for <span className="text-blue-500">{eventTitle}</span></p>
+              <h2 className="text-2xl font-bold text-foreground mb-1 tracking-tight">{t('enter_email')}</h2>
+              <p className="text-gray-500 text-xs font-semibold">{t('verify_identity_for')} <span className="text-primary">{eventTitle}</span></p>
             </div>
             <form onSubmit={handleEmailSubmit} className="space-y-4">
               <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-primary transition-colors" />
                 <input
                   required
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="university@email.com"
-                  className="w-full pl-11 pr-4 py-4 bg-background border border-border-color rounded-2xl text-foreground focus:ring-2 focus:ring-blue-500/40 transition-all font-bold text-sm"
+                  placeholder="name@safespeech.com.tr"
+                  className="w-full pl-11 pr-4 py-4 bg-background border border-border-color rounded-xl text-foreground focus:ring-2 focus:ring-primary/40 transition-all font-bold text-sm"
                 />
               </div>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-all shadow-xl shadow-blue-500/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full py-4 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl transition-all shadow-xl shadow-primary/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                Continue <ArrowRight className="w-4 h-4" />
+                {t('continue')} <ArrowRight className="w-4 h-4" />
               </button>
             </form>
           </motion.div>
@@ -418,47 +465,47 @@ function ScannerContent() {
             key="register"
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="w-full bg-card-bg/60 backdrop-blur-3xl border border-border-color p-8 rounded-4xl shadow-2xl"
+            className="w-full bg-card-bg/60 backdrop-blur-3xl border border-border-color p-8 rounded-3xl shadow-2xl"
           >
             <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-orange-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-orange-500/20">
-                <UserPlus className="w-8 h-8 text-orange-500" />
+              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-primary/20">
+                <UserPlus className="w-8 h-8 text-primary" />
               </div>
-              <h2 className="text-2xl font-black text-foreground mb-1">Complete Registration</h2>
-              <p className="text-gray-500 text-xs font-medium mb-2">We couldn't find your record. Please provide your details.</p>
-              <div className="inline-flex py-1 px-3 bg-card-bg border border-border-color rounded-full text-[10px] font-bold text-blue-400">{email}</div>
+              <h2 className="text-2xl font-bold text-foreground mb-1 tracking-tight">{t('complete_registration')}</h2>
+              <p className="text-gray-500 text-xs font-semibold mb-3">{t('reg_not_found')}</p>
+              <div className="inline-flex py-1 px-3 bg-card-bg border border-border-color rounded-full text-[10px] font-bold text-primary">{email}</div>
             </div>
 
             <form onSubmit={handleRegistrationSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">First Name</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] ml-1">{t('first_name')}</label>
                   <input
                     required
                     value={regData.firstName}
                     onChange={(e) => setRegData({...regData, firstName: e.target.value})}
-                    className="w-full px-4 py-3 bg-background border border-border-color rounded-2xl text-foreground focus:ring-2 focus:ring-blue-500/40 transition-all font-bold text-sm"
+                    className="w-full px-4 py-3 bg-background border border-border-color rounded-xl text-foreground focus:ring-2 focus:ring-primary/40 transition-all font-bold text-sm"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Last Name</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] ml-1">{t('last_name')}</label>
                   <input
                     required
                     value={regData.lastName}
                     onChange={(e) => setRegData({...regData, lastName: e.target.value})}
-                    className="w-full px-4 py-3 bg-background border border-border-color rounded-2xl text-foreground focus:ring-2 focus:ring-blue-500/40 transition-all font-bold text-sm"
+                    className="w-full px-4 py-3 bg-background border border-border-color rounded-xl text-foreground focus:ring-2 focus:ring-primary/40 transition-all font-bold text-sm"
                   />
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Phone Number</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] ml-1">{t('phone_number')}</label>
                 <div className="relative group">
-                  <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                  <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-primary transition-colors" />
                   <input
                     required
                     value={regData.phone}
                     onChange={(e) => setRegData({...regData, phone: e.target.value})}
-                    className="w-full pl-11 pr-4 py-3 bg-background border border-border-color rounded-2xl text-foreground focus:ring-2 focus:ring-blue-500/40 transition-all font-bold text-sm"
+                    className="w-full pl-11 pr-4 py-3 bg-background border border-border-color rounded-xl text-foreground focus:ring-2 focus:ring-primary/40 transition-all font-bold text-sm"
                     placeholder="+90 XXX XXX XX XX"
                   />
                 </div>
@@ -466,9 +513,9 @@ function ScannerContent() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-all shadow-xl shadow-blue-500/20 active:scale-95 disabled:opacity-50 mt-2"
+                className="w-full py-4 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl transition-all shadow-xl shadow-primary/20 active:scale-95 disabled:opacity-50 mt-2"
               >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Complete Check-in"}
+                {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t('complete_checkin')}
               </button>
             </form>
           </motion.div>
@@ -479,18 +526,18 @@ function ScannerContent() {
             key="error"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="text-center p-12 bg-red-500/10 border border-red-500/20 rounded-4xl shadow-2xl"
+            className="text-center p-12 bg-red-500/5 border border-red-500/10 rounded-3xl shadow-2xl"
           >
             <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500">
               <XCircle className="w-12 h-12" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-2 tracking-tight">Verification Denied</h2>
-            <p className="text-red-400 font-medium mb-10 leading-relaxed text-sm px-4">{error}</p>
+            <h2 className="text-2xl font-bold text-foreground mb-2 tracking-tight">{t('verification_denied')}</h2>
+            <p className="text-red-500/80 font-bold mb-10 leading-relaxed text-sm px-4">{error}</p>
             <button 
               onClick={() => setStatus('idle')}
-              className="w-full bg-card-bg hover:bg-card-bg/80 py-4 rounded-2xl font-bold text-foreground border border-border-color transition-all shadow-xl active:scale-[0.98]"
+              className="w-full bg-card-bg hover:bg-border-color py-4 rounded-xl font-bold text-foreground border border-border-color transition-all shadow-xl active:scale-[0.98]"
             >
-              Try Again
+              {t('try_again')}
             </button>
           </motion.div>
         )}
@@ -510,9 +557,9 @@ function ScannerContent() {
 export default function Scanner() {
   return (
     <Suspense fallback={
-      <div className="flex flex-col items-center justify-center p-20 bg-card-bg/40 border border-border-color rounded-4xl">
-        <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
-        <p className="mt-4 text-gray-500 font-medium">Loading Scanner Components...</p>
+      <div className="flex flex-col items-center justify-center p-20 bg-card-bg/40 border border-border-color rounded-3xl">
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+        <p className="mt-4 text-gray-500 font-bold uppercase tracking-widest text-[10px]">{(typeof window !== 'undefined' && localStorage.getItem('NEXT_LOCALE') === 'tr') ? 'Sistem Yükleniyor...' : 'Loading System Components...'}</p>
       </div>
     }>
       <ScannerContent />

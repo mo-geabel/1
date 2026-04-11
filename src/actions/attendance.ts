@@ -150,11 +150,10 @@ export async function checkInAction(data: {
     } else {
       return { error: 'GPS location is required for verification.', status: 'INVALID_LOCATION' };
     }
-
     // 3. Identification (Session or Registration)
-    let participantEmail: string;
-    let participantFirstName: string;
-    let participantLastName: string;
+    let participantEmail: string = '';
+    let participantFirstName: string = '';
+    let participantLastName: string = '';
     let participantPhone: string | null = null;
     let isWalkIn = false;
 
@@ -162,68 +161,33 @@ export async function checkInAction(data: {
     const sessionToken = cookieStore.get('session')?.value;
     
     if (data.registrationData) {
-      // HANDLE INLINE REGISTRATION
+      // HANDLE INLINE REGISTRATION (Record only)
       const { email, firstName, lastName, phone } = data.registrationData;
       participantEmail = email;
       participantFirstName = firstName;
       participantLastName = lastName;
       participantPhone = phone;
       isWalkIn = true;
-
-      // Optional: Update/Create user record for authentication persistence
-      let [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-      if (!user) {
-        await db.insert(users).values({
-          email,
-          firstName,
-          lastName,
-          phone,
-          password: 'TEMPORARY_ACCESS',
-          role: 'PARTICIPANT',
-        });
-      }
-
-      // Create session so they don't have to register again
-      const tokenString = await new SignJWT({ 
-        email, 
-        role: 'PARTICIPANT',
-        name: `${firstName} ${lastName}`
-      })
-        .setProtectedHeader({ alg: 'HS256' })
-        .setIssuedAt()
-        .setExpirationTime('5m')
-        .sign(encodedSecret);
-      
-      cookieStore.set('session', tokenString, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 60 * 60 * 24 * 7,
-        path: '/',
-      });
-
     } else if (sessionToken) {
-      // LOGGED IN USER FLOW
+      // ADMIN FLOW (If scanning via admin session, though unlikely for check-in)
       try {
         const { payload } = await jwtVerify(sessionToken, encodedSecret);
-        const decoded = payload as { email: string, name?: string };
-        participantEmail = decoded.email;
+        const decoded = payload as { email: string, name?: string, role: string };
         
-        // Fetch full details from users table to be safe
-        const [user] = await db.select().from(users).where(eq(users.email, participantEmail)).limit(1);
-        if (user) {
-          participantFirstName = user.firstName || 'Student';
-          participantLastName = user.lastName || '';
-          participantPhone = user.phone;
+        if (decoded.role === 'ADMIN') {
+          // Admins don't check themselves in here usually, but we handle it
+          participantEmail = decoded.email;
+          const [user] = await db.select().from(users).where(eq(users.email, participantEmail)).limit(1);
+          participantFirstName = user?.firstName || 'Admin';
+          participantLastName = user?.lastName || '';
         } else {
-          participantFirstName = decoded.name?.split(' ')[0] || 'Student';
-          participantLastName = decoded.name?.split(' ').slice(1).join(' ') || '';
+          return { error: 'Invalid session type.' };
         }
       } catch (e) {
         return { error: 'Invalid session. Please login again.' };
       }
     } else {
-      // GUEST FLOW (Needs registration)
-      // Generate a longer lived registration token (15 mins) to allow form completion
+      // GUEST FLOW (Needs identification)
       const registrationToken = await new SignJWT({ 
         eventId: event.id, 
         type: 'registration_submit',
@@ -274,16 +238,29 @@ export async function checkInAction(data: {
     ).limit(1);
 
     if (existing) {
-      return { success: true, eventTitle: event.title, userName: `${participantFirstName} ${participantLastName}`, alreadyCheckedIn: true };
+      // If it's an ABSENT record, we allow it to be updated to VALID/EXTRA
+      if (existing.status !== 'ABSENT') {
+        return { success: true, eventTitle: event.title, userName: `${participantFirstName} ${participantLastName}`, alreadyCheckedIn: true };
+      }
     }
 
-    await db.insert(attendance).values({
-      eventId: event.id,
-      participantId: participant.id,
-      latitude: data.latitude,
-      longitude: data.longitude,
-      status: wasPreRegistered ? 'VALID' : 'EXTRA',
-    });
+    if (existing && existing.status === 'ABSENT') {
+      await db.update(attendance).set({
+        latitude: data.latitude,
+        longitude: data.longitude,
+        status: wasPreRegistered ? 'VALID' : 'EXTRA',
+        timestamp: new Date(), // We set the timestamp now!
+      }).where(eq(attendance.id, existing.id));
+    } else {
+      await db.insert(attendance).values({
+        eventId: event.id,
+        participantId: participant.id,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        status: wasPreRegistered ? 'VALID' : 'EXTRA',
+        timestamp: new Date(), // Set timestamp explicitly just in case
+      });
+    }
 
     return { success: true, eventTitle: event.title, userName: `${participantFirstName} ${participantLastName}`, status: wasPreRegistered ? 'VALID' : 'EXTRA' };
 
@@ -341,7 +318,7 @@ export async function syncAbsencesAction(eventId: string) {
       eventId,
       participantId: p.id,
       status: 'ABSENT' as const,
-      timestamp: new Date(), // Marking them absent now
+      // timestamp is omitted so it stays null
     }));
 
     // Use onConflictDoNothing in case they were already marked absent

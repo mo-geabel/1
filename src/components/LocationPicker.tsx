@@ -71,16 +71,16 @@ export default function LocationPicker({ lat, lng, onChange }: LocationPickerPro
   };
 
   if (!mounted) return (
-    <div className="w-full h-[400px] bg-card-bg/50 border border-border-color rounded-2xl flex items-center justify-center animate-pulse">
-      <div className="flex flex-col items-center gap-4">
-        <Target className="w-10 h-10 text-blue-500 opacity-20" />
-        <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">Initializing Map...</span>
+    <div className="w-full h-[280px] md:h-[450px] bg-card-bg/50 border border-border-color rounded-2xl flex items-center justify-center animate-pulse">
+      <div className="flex flex-col items-center gap-3">
+        <Target className="w-8 h-8 md:w-10 md:h-10 text-primary opacity-20" />
+        <span className="text-[10px] md:text-sm font-bold text-gray-500 uppercase tracking-widest px-8 text-center">Initializing Map...</span>
       </div>
     </div>
   );
 
   return (
-    <div className="w-full h-[400px] relative rounded-2xl overflow-hidden border border-border-color shadow-inner group">
+    <div className="w-full h-[280px] md:h-[450px] relative rounded-[2rem] md:rounded-3xl overflow-hidden border border-border-color shadow-inner group">
       <MapContainer 
         center={[lat || 30.0444, lng || 31.2357]} // Default to Cairo as a fallback if not provided
         zoom={13} 
@@ -105,13 +105,13 @@ export default function LocationPicker({ lat, lng, onChange }: LocationPickerPro
       </MapContainer>
       
       {/* Search Overlay */}
-      <div className="absolute top-4 left-4 right-4 z-20 max-w-sm mx-auto md:mx-0">
+      <div className="absolute top-2 md:top-4 left-2 right-2 md:left-4 md:right-4 z-20 max-w-sm mx-auto md:mx-0">
         <div className="relative group">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             {searching ? (
-              <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+              <Loader2 className="w-4 h-4 text-primary animate-spin" />
             ) : (
-              <Search className="w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+              <Search className="w-4 h-4 text-gray-400 group-focus-within:text-primary transition-colors" />
             )}
           </div>
           <input
@@ -125,7 +125,7 @@ export default function LocationPicker({ lat, lng, onChange }: LocationPickerPro
               }
             }}
             placeholder="Search venue or city..."
-            className="w-full pl-11 pr-4 py-3 bg-background/80 backdrop-blur-xl border border-border-color rounded-2xl text-xs font-bold text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all shadow-2xl"
+            className="w-full pl-11 pr-4 py-3.5 md:py-3 bg-background/95 md:bg-background/80 backdrop-blur-3xl md:backdrop-blur-xl border border-border-color rounded-2xl text-xs font-bold text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all shadow-2xl"
           />
           
           {searchResults.length > 0 && (
@@ -135,7 +135,7 @@ export default function LocationPicker({ lat, lng, onChange }: LocationPickerPro
                   key={i}
                   type="button"
                   onClick={() => selectResult(result)}
-                  className="w-full text-left px-5 py-4 text-[10px] font-bold text-gray-400 hover:text-foreground hover:bg-blue-500/10 transition-all border-b last:border-0 border-border-color uppercase tracking-tight leading-relaxed"
+                  className="w-full text-left px-4 py-3 text-[9px] md:text-xs font-bold text-gray-400 hover:text-foreground hover:bg-primary/10 transition-all border-b last:border-0 border-border-color uppercase tracking-tight leading-relaxed"
                 >
                   {result.display_name}
                 </button>
@@ -146,21 +146,13 @@ export default function LocationPicker({ lat, lng, onChange }: LocationPickerPro
       </div>
 
       {/* Floating Instructions */}
-      <div className="absolute bottom-4 left-4 z-20 pointer-events-none">
-        <div className="px-4 py-2 bg-background/80 backdrop-blur-md border border-border-color rounded-xl text-[10px] font-bold text-blue-500 uppercase tracking-wider shadow-xl flex items-center gap-2">
+      <div className="absolute bottom-2 md:bottom-4 left-2 md:left-4 z-20 pointer-events-none hidden sm:block">
+        <div className="px-3 md:px-4 py-2 bg-background/90 md:bg-background/80 backdrop-blur-md border border-border-color rounded-xl text-[8px] md:text-[10px] font-bold text-primary uppercase tracking-wider shadow-xl flex items-center gap-2">
           <Crosshair className="w-3 h-3" />
           Click or Drag marker to set location
         </div>
       </div>
       
-      {/* Search mock or overlay if needed */}
-      <div className="absolute top-4 right-4 z-20">
-        <div className="p-3 bg-background/80 backdrop-blur-md border border-border-color rounded-2xl shadow-xl flex items-center gap-3">
-          <MapPin className="w-4 h-4 text-blue-500" />
-          <span className="text-xs font-bold text-foreground">Interactive Map Picker</span>
-        </div>
-      </div>
-
       <style jsx global>{`
         .leaflet-container {
           filter: grayscale(1) invert(1) brightness(0.9) contrast(1.1);

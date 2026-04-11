@@ -2,16 +2,13 @@ import { pgTable, text, timestamp, doublePrecision, integer, boolean, pgEnum, uu
 import { relations } from 'drizzle-orm';
 
 export const attendanceStatusEnum = pgEnum('attendance_status', ['VALID', 'INVALID_LOCATION', 'EXPIRED_QR', 'ABSENT', 'EXTRA']);
-export const userRoleEnum = pgEnum('user_role', ['ADMIN', 'PARTICIPANT']);
-
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
   email: text('email').notNull().unique(),
   password: text('password').notNull(),
   firstName: text('first_name'),
   lastName: text('last_name'),
-  phone: text('phone'),
-  role: userRoleEnum('role').default('PARTICIPANT').notNull(),
+  role: text('role').default('ADMIN').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -48,7 +45,7 @@ export const attendance = pgTable('attendance', {
   id: uuid('id').defaultRandom().primaryKey(),
   eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
   participantId: uuid('participant_id').references(() => participants.id, { onDelete: 'cascade' }).notNull(),
-  timestamp: timestamp('timestamp').defaultNow().notNull(),
+  timestamp: timestamp('timestamp'),
   latitude: doublePrecision('latitude'),
   longitude: doublePrecision('longitude'),
   status: attendanceStatusEnum('status').default('VALID').notNull(),
