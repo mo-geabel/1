@@ -551,12 +551,7 @@ function ScannerContent() {
             </div>
             <h2 className="text-2xl font-bold text-foreground mb-2 tracking-tight">{t('verification_denied')}</h2>
             <p className="text-red-500/80 font-bold mb-10 leading-relaxed text-sm px-4">{error}</p>
-            <button 
-              onClick={() => setStatus('idle')}
-              className="w-full bg-card-bg hover:bg-border-color py-4 rounded-xl font-bold text-foreground border border-border-color transition-all shadow-xl active:scale-[0.98]"
-            >
-              {t('try_again')}
-            </button>
+            
           </motion.div>
         )}
       </AnimatePresence>
