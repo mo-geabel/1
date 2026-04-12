@@ -113,6 +113,17 @@ export const translations = {
     registration_type: "Reg. Type",
     pre_registered: "Pre-registered",
     walk_in: "Walk-in",
+    
+    // Bulk Upload
+    bulk_upload_title: "Pre-register Participants",
+    bulk_upload_desc: "Upload Excel/CSV to enroll participants before the event.",
+    drag_drop_text: "Click to browse or Drag & Drop",
+    import_button: "Import Now",
+    importing_button: "Importing...",
+    file_empty_error: "The file is empty or could not be read.",
+    no_valid_data_error: "No valid participants found. Check your 'Email' column.",
+    import_success_msg: "Participants successfully imported!",
+    file_read_error: "Error reading file. Please use a valid Excel or CSV file.",
 
     // Event Form Keys
     session_basics: "Session Basics",
@@ -127,6 +138,12 @@ export const translations = {
     longitude: "Longitude",
     venue_verification_enforced: "Venue verification is strictly enforced. Entries are permitted within {radius} meters of the specified point.",
     initializing_map: "Initialising Secure Map...",
+    
+    // Live QR Page
+    live_attendance_title: "Live Attendance System",
+    scan_qr_instruction: "Scan the QR code below to record your participation.",
+    dynamic_rotation_active: "Dynamic rotation active",
+    qr_rotation_description: "A secure, encrypted QR code is generated every 90 seconds. Late arrivals must scan current valid codes.",
   },
   tr: {
     // Shared
@@ -240,6 +257,23 @@ export const translations = {
     registration_type: "Kayıt Tipi",
     pre_registered: "Ön Kayıtlı",
     walk_in: "Yeni Kayıt",
+    
+    // Katılımcı Yükleme
+    bulk_upload_title: "Katılımcı Ön Kaydı",
+    bulk_upload_desc: "Katılımcıları kaydetmek için Excel/CSV dosyası yükleyin.",
+    drag_drop_text: "Göz atmak için tıklayın veya sürükleyip bırakın",
+    import_button: "Şimdi İçe Aktar",
+    importing_button: "İçe Aktarılıyor...",
+    file_empty_error: "Dosya boş veya okunamadı.",
+    no_valid_data_error: "Geçerli katılımcı bulunamadı. 'E-posta' sütununu kontrol edin.",
+    import_success_msg: "Katılımcılar başarıyla içe aktarıldı!",
+    file_read_error: "Dosya okuma hatası. Geçerli bir Excel veya CSV dosyası kullanın.",
+    
+    // Canlı QR Sayfası
+    live_attendance_title: "Canlı Yoklama Sistemi",
+    scan_qr_instruction: "Katılımınızı kaydetmek için aşağıdaki QR kodu tarayın.",
+    dynamic_rotation_active: "Dinamik rotasyon aktif",
+    qr_rotation_description: "Her 90 saniyede bir güvenli, şifrelenmiş bir QR kod oluşturulur. Geç gelenler güncel kodları taramalıdır.",
 
     // Event Form Keys
     session_basics: "Oturum Bilgileri",

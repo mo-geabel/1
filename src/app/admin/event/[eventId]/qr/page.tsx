@@ -14,7 +14,7 @@ export default function EventQrPage({ params }: { params: React.Usable<{ eventId
   const { eventId } = React.use(params);
   const [token, setToken] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [timeLeft, setTimeLeft] = React.useState(60);
+  const [timeLeft, setTimeLeft] = React.useState(90);
   const [qrSize, setQrSize] = React.useState(200);
 
   React.useEffect(() => {
@@ -31,7 +31,7 @@ export default function EventQrPage({ params }: { params: React.Usable<{ eventId
       setLoading(true);
       const data = await generateQrToken(eventId);
       setToken(data.token);
-      setTimeLeft(60);
+      setTimeLeft(90);
       setLoading(false);
     } catch (err) {
       console.error(err);
@@ -84,8 +84,8 @@ export default function EventQrPage({ params }: { params: React.Usable<{ eventId
           <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-50" />
           
           <div className="mb-10">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground mb-2">Live Attendance System</h1>
-            <p className="text-gray-500 text-sm font-medium">Scan the QR code below to record your participation.</p>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground mb-2">{t('live_attendance_title')}</h1>
+            <p className="text-gray-500 text-sm font-medium">{t('scan_qr_instruction')}</p>
           </div>
 
           <div className="relative inline-block p-8 md:p-10 bg-white rounded-[2rem] shadow-[0_0_80px_rgba(0,0,0,0.05)] border-4 border-border-color">
@@ -125,15 +125,15 @@ export default function EventQrPage({ params }: { params: React.Usable<{ eventId
             {/* Timer */}
             <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-primary/10 border border-primary/20 text-primary font-bold tracking-widest text-lg shadow-sm">
               <Clock className="w-5 h-5" />
-              00:{timeLeft.toString().padStart(2, '0')}
+              {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
             </div>
 
             <div className="flex flex-col items-center gap-2">
               <div className="flex items-center gap-2 text-gray-500 text-sm font-semibold uppercase tracking-wider">
                 <ShieldCheck className="w-4 h-4 text-green-500" />
-                Dyanamic rotation active
+                {t('dynamic_rotation_active')}
               </div>
-              <p className="text-gray-500 text-xs leading-relaxed max-w-sm mx-auto">A secure, encrypted QR code is generated every 60 seconds. Late arrivals must scan current valid codes.</p>
+              <p className="text-gray-500 text-xs leading-relaxed max-w-sm mx-auto">{t('qr_rotation_description')}</p>
             </div>
           </div>
         </div>

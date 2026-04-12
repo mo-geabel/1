@@ -6,12 +6,14 @@ import * as XLSX from 'xlsx';
 import { importParticipantsAction } from '@/actions/participants';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/components/LanguageContext';
 
 interface ParticipantUploadProps {
   eventId: string;
 }
 
 export default function ParticipantUpload({ eventId }: ParticipantUploadProps) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -40,7 +42,7 @@ export default function ParticipantUpload({ eventId }: ParticipantUploadProps) {
         console.log('Raw JSON from file:', json);
 
         if (!json || json.length === 0) {
-          toast.error('The file is empty or could not be read.');
+          toast.error(t('file_empty_error'));
           setLoading(false);
           return;
         }
@@ -74,7 +76,7 @@ export default function ParticipantUpload({ eventId }: ParticipantUploadProps) {
         console.log('Formatted participants:', formattedData);
 
         if (formattedData.length === 0) {
-          toast.error('No valid participants found. Ensure your file has an "Email" column and valid data.');
+          toast.error(t('no_valid_data_error'));
           setLoading(false);
           return;
         }
@@ -82,16 +84,16 @@ export default function ParticipantUpload({ eventId }: ParticipantUploadProps) {
         const result = await importParticipantsAction(eventId, formattedData);
         
         if (result.success) {
-          toast.success(`Successfully imported ${result.count} participants!`);
+          toast.success(`${result.count} ${t('import_success_msg')}`);
           setFile(null);
           if (fileInputRef.current) fileInputRef.current.value = '';
           router.refresh();
         } else {
-          toast.error(result.error || 'Failed to import participants.');
+          toast.error(result.error || t('failed_save_participant'));
         }
       } catch (err) {
         console.error('File parsing error:', err);
-        toast.error('Error reading file. Please use a valid Excel or CSV file.');
+        toast.error(t('file_read_error'));
       } finally {
         setLoading(false);
       }
@@ -118,8 +120,8 @@ export default function ParticipantUpload({ eventId }: ParticipantUploadProps) {
             <Table className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-lg md:text-xl font-bold">Pre-register Participants</h3>
-            <p className="text-gray-500 text-sm font-medium">Upload Excel/CSV to enroll participants before the event.</p>
+            <h3 className="text-lg md:text-xl font-bold">{t('bulk_upload_title')}</h3>
+            <p className="text-gray-500 text-sm font-medium">{t('bulk_upload_desc')}</p>
           </div>
         </div>
       </div>
@@ -147,7 +149,7 @@ export default function ParticipantUpload({ eventId }: ParticipantUploadProps) {
           ) : (
             <div className="flex flex-col items-center gap-2">
               <Upload className="w-8 h-8 text-gray-300" />
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest text-center">Click to browse or Drag & Drop</p>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest text-center">{t('drag_drop_text')}</p>
             </div>
           )}
         </div>
@@ -158,11 +160,14 @@ export default function ParticipantUpload({ eventId }: ParticipantUploadProps) {
           className="sm:w-48 bg-primary hover:bg-primary-hover disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 text-white font-bold rounded-2xl py-4 sm:py-0 transition-all shadow-lg shadow-primary/10 flex items-center justify-center gap-3 active:scale-[0.98]"
         >
           {loading ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span className="text-xs uppercase tracking-widest">{t('importing_button')}</span>
+            </>
           ) : (
             <>
               <CheckCircle className="w-5 h-5" />
-              Import Now
+              {t('import_button')}
             </>
           )}
         </button>
