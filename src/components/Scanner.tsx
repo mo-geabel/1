@@ -26,6 +26,7 @@ function ScannerContent() {
   const [error, setError] = useState<string | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null);
+  const [locationChecked, setLocationChecked] = useState(false);
   const [eventTitle, setEventTitle] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -44,17 +45,6 @@ function ScannerContent() {
     if (typeof window === 'undefined') return;
     setError(null);
 
-    // Permission API check
-    if (navigator.permissions && navigator.permissions.query) {
-      try {
-        const status = await navigator.permissions.query({ name: 'geolocation' });
-        console.log('Browser Permission Status:', status.state);
-        status.onchange = () => console.log('Permission changed to:', status.state);
-      } catch (e) {
-        console.warn('Permissions query not supported');
-      }
-    }
-
     // Security context check
     const isIP = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(window.location.hostname);
     if (!window.isSecureContext && window.location.hostname !== 'localhost' && !isIP) {
@@ -67,46 +57,69 @@ function ScannerContent() {
     if ('geolocation' in navigator) {
       const options = { 
         enableHighAccuracy: !isRetry, 
-        timeout: 12000, 
+        timeout: 15000, 
         maximumAge: isRetry ? 60000 : 0 
       };
       
       console.log(`Requesting location (High accuracy: ${!isRetry})...`);
-      
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-          setError(null);
-        },
-        (err) => {
-          const errCode = err?.code;
-          const errMsg = err?.message || 'No specific error message provided';
-          
-          // Fallback logic
-          if (!isRetry && (errCode === 2 || errCode === 3 || errCode === undefined)) {
-            console.warn('High-accuracy GPS failed, trying Wi-Fi/Cell fallback...');
-            fetchLocation(true);
-            return;
-          }
 
-          let msg = '';
-          if (errCode === 1) msg = 'Location Permission Denied. Please check your phone settings.';
-          else if (errCode === 2) msg = 'Position Unavailable. Move to an area with better signal.';
-          else if (errCode === 3) msg = 'Request Timed Out. Your GPS is taking too long to respond.';
-          else msg = errMsg;
-          
-          // Add technical details for on-screen debugging
-          setError(`${msg} (Error Code: ${errCode || '?'})`);
-        },
-        options
-      );
+      // Wrap in a promise so we can await it properly
+      return new Promise<void>((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+            setError(null);
+            resolve();
+          },
+          (err) => {
+            const errCode = err?.code;
+            const errMsg = err?.message || 'No specific error message provided';
+            
+            // Fallback logic: retry with lower accuracy on position unavailable / timeout
+            if (!isRetry && (errCode === 2 || errCode === 3 || errCode === undefined)) {
+              console.warn('High-accuracy GPS failed, trying Wi-Fi/Cell fallback...');
+              fetchLocation(true).then(resolve);
+              return;
+            }
+
+            let msg = '';
+            if (errCode === 1) msg = 'Location Permission Denied. Please check your phone settings.';
+            else if (errCode === 2) msg = 'Position Unavailable. Move to an area with better signal.';
+            else if (errCode === 3) msg = 'Request Timed Out. Your GPS is taking too long to respond.';
+            else msg = errMsg;
+            
+            setError(`${msg} (Error Code: ${errCode || '?'})`);
+            resolve();
+          },
+          options
+        );
+      });
     } else {
       setError('Geolocation is not supported by this browser.');
     }
   };
 
+  // On mount: silently try to get location ONLY if already permitted.
+  // Safari blocks prompts without a user gesture, so we use a short timeout
+  // to avoid triggering a prompt. If it fails silently, the user will tap
+  // the button which counts as a user gesture and will trigger the real prompt.
   useEffect(() => {
-    fetchLocation();
+    if (typeof window === 'undefined' || !('geolocation' in navigator)) return;
+
+    // Try with a short timeout — if location is already permitted this succeeds fast.
+    // If not permitted, this will silently fail on Safari (no prompt shown).
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocationChecked(true);
+      },
+      () => {
+        // Silently ignore — user will tap the button to trigger the real prompt
+        console.log('Auto-location not available (this is normal on Safari). User must tap to grant.');
+        setLocationChecked(true);
+      },
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+    );
   }, []);
 
   // AUTO-VERIFY if token is in URL
@@ -315,15 +328,20 @@ function ScannerContent() {
                 }}
                 className="w-full bg-primary hover:bg-primary/90 py-4 rounded-xl font-bold text-white transition-all shadow-xl shadow-primary/20 active:scale-[0.98] group flex items-center justify-center gap-3"
               >
-                {!location && !error ? (
+                {!location && !locationChecked && !error ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
+                    {t('verify_location')}
+                  </>
+                ) : !location ? (
+                  <>
+                    <MapPin className="w-5 h-5 group-hover:scale-110 transition-transform" />
                     {t('verify_location')}
                   </>
                 ) : (
                   <>
                     <ScanLine className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                    {location && t('retry_location')}
+                    {t('retry_location')}
                   </>
                 )}
               </button>

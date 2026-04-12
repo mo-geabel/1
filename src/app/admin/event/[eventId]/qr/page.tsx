@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import * as React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { generateQrToken } from '@/actions/qr';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,15 +9,15 @@ import Link from 'next/link';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useLanguage } from '@/components/LanguageContext';
 
-export default function EventQrPage({ params }: { params: Promise<{ eventId: string }> }) {
+export default function EventQrPage({ params }: { params: React.Usable<{ eventId: string }> }) {
   const { t } = useLanguage();
-  const { eventId } = use(params);
-  const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [timeLeft, setTimeLeft] = useState(60);
-  const [qrSize, setQrSize] = useState(200);
+  const { eventId } = React.use(params);
+  const [token, setToken] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [timeLeft, setTimeLeft] = React.useState(60);
+  const [qrSize, setQrSize] = React.useState(200);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const handleResize = () => {
       setQrSize(window.innerWidth < 768 ? 180 : 220);
     };
@@ -39,18 +39,18 @@ export default function EventQrPage({ params }: { params: Promise<{ eventId: str
     }
   };
 
-  useEffect(() => {
+  React.useEffect(() => {
     refreshToken();
   }, [eventId]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const interval = setInterval(() => {
       setTimeLeft((prev) => Math.max(0, prev - 1));
     }, 1000);
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (timeLeft === 0 && !loading) {
       refreshToken();
     }

@@ -8,6 +8,7 @@ import { getDistance } from 'geolib';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { getEncodedSecret, getJwtSecret } from '@/lib/auth';
+import { triggerAutomation } from '@/lib/automation';
 
 const encodedSecret = getEncodedSecret();
 
@@ -262,6 +263,21 @@ export async function checkInAction(data: {
       });
     }
 
+    // 6. Trigger Automation (Non-blocking)
+    triggerAutomation('check_in', {
+      eventId: event.id,
+      eventTitle: event.title,
+      eventDate: event.date,
+      participant: {
+        id: participant.id,
+        name: participantFirstName,
+        surname: participantLastName,
+        email: participantEmail,
+        isWalkIn: isWalkIn
+      },
+      status: wasPreRegistered ? 'VALID' : 'EXTRA'
+    });
+
     return { success: true, eventTitle: event.title, userName: `${participantFirstName} ${participantLastName}`, status: wasPreRegistered ? 'VALID' : 'EXTRA' };
 
   } catch (err) {
@@ -323,6 +339,18 @@ export async function syncAbsencesAction(eventId: string) {
 
     // Use onConflictDoNothing in case they were already marked absent
     await db.insert(attendance).values(absentRecords).onConflictDoNothing();
+
+    // 3. Trigger Automation (Reporting)
+    triggerAutomation('absences_synced', {
+      eventId,
+      eventTitle: event.title,
+      absentCount: absentRecords.length,
+      participants: absentParticipants.map(p => ({
+        name: p.name,
+        surname: p.surname,
+        email: p.email
+      }))
+    });
 
     revalidatePath(`/admin/event/${eventId}/attendance`);
     return { success: true, count: absentRecords.length };
