@@ -7,6 +7,7 @@ import { sign } from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import { getJwtSecret } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import bcrypt from 'bcryptjs';
 
 const secretKey = getJwtSecret();
 
@@ -23,8 +24,7 @@ export async function loginAction(formData: FormData) {
       eq(users.email, email)
     ).limit(1);
 
-    // SECURITY WARNING: In production, passwords MUST be hashed.
-    if (!user || user.password !== password) {
+    if (!user || !(await bcrypt.compare(password, user.password))) {
       return { error: 'Invalid email or password.' };
     }
 

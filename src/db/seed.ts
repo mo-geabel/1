@@ -3,6 +3,7 @@ import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import * as schema from './schema';
 import { users, events, attendance } from './schema';
+import bcrypt from 'bcryptjs';
 
 async function main() {
   if (!process.env.DATABASE_URL) {
@@ -20,9 +21,11 @@ async function main() {
   await db.delete(users);
 
   // 1. Create Admin
+  const hashedPassword = await bcrypt.hash('password123', 10);
+  
   const [admin] = await db.insert(users).values({
     email: 'admin@faculty.edu',
-    password: 'password123',
+    password: hashedPassword,
     firstName: 'System',
     lastName: 'Administrator',
     role: 'ADMIN',
@@ -38,13 +41,6 @@ async function main() {
     radius: 10000000, // 10,000 km (For Global Testing)
     qrSecret: 'faculty-secret-2026-symposium',
   }).returning();
-
-  // 3. Pre-create some participants
-  await db.insert(users).values([
-    { email: 'student1@university.edu', firstName: 'Ahmet', lastName: 'Yılmaz', password: 'password123', role: 'PARTICIPANT' },
-    { email: 'student2@university.edu', firstName: 'Ayşe', lastName: 'Demir', password: 'password123', role: 'PARTICIPANT' },
-    { email: 'student3@university.edu', firstName: 'Mehmet', lastName: 'Kaya', password: 'password123', role: 'PARTICIPANT' },
-  ]);
 
   console.log('Seed data created successfully!');
 }
