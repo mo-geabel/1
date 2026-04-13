@@ -9,39 +9,126 @@ To access the management dashboard, use the following credentials:
 - **Admin Email**: `admin@faculty.edu`
 - **Password**: `password123`
 
+> Passwords are hashed with **bcrypt** (10 salt rounds). The seed script auto-hashes the default password.
+
 ---
 
 ## ✨ Key Features
 
 ### 1. High-Security Attendance
-- **Dynamic QR Validation**: QR codes rotate every **90 seconds**. Each token is cryptographically signed using JWT (`jose`) and is timestamped to prevent reuse or photo-sharing.
-- **GPS Geo-fencing**: Participants must be within the specified radius (e.g., 200m) of the event coordinates to successfully check in.
-- **Real-Time Identification**: Automatic lookup for pre-registered participants with a seamless "Walk-in" registration flow for new arrivals.
+- **Dynamic QR Validation**: QR codes rotate every **90 seconds**. Each token is cryptographically signed using **HMAC-SHA256** via `jose` (`SignJWT`) and timestamped to prevent reuse or screenshot-sharing.
+- **GPS Geo-fencing**: Participants must be within the configured radius (default: 200m) of the event coordinates. Distance calculated using the **Haversine formula** via `geolib`.
+- **Multi-Status Tracking**: Every attendance record has a status — `VALID`, `INVALID_LOCATION`, `EXPIRED_QR`, `ABSENT`, or `EXTRA` (walk-in).
+- **Safari Compatibility**: Custom geolocation flow that handles Safari's user-gesture requirement for location permissions, with silent probing on mount and explicit prompts on button tap.
 
-### 2. Admin Infrastructure
-- **Comprehensive Dashboard**: View real-time attendance counts, active sessions, and participant statistics.
-- **Bulk Import**: Intelligent Excel and CSV uploader that automatically maps columns (Name, Email, Phone) even with different headers.
-- **Live Monitoring**: Track "Present" vs "Absent" records as they happen.
+### 2. Smart Participant Management
+- **Pre-Registration**: Bulk import participants via Excel/CSV (`xlsx` library). Auto-maps Name, Surname, Email, and Phone columns.
+- **Walk-in Registration**: New arrivals scan the QR, enter their email, and complete an inline registration form — no app download required.
+- **Full CRUD**: Add, edit, search, and delete individual participants through the admin dashboard.
+- **Duplicate Prevention**: Unique constraint on `(event_id, email)` prevents double entries per event.
 
-### 3. n8n Automation Integration
-- **Automated Certificates**: Triggers a webhook on every check-in to generate and email PDF certificates to participants.
-- **Absence Reporting**: One-click "Sync Absences" pushes a detailed report of missing participants to your automation server.
+### 3. Admin Dashboard
+- **Session Cards**: Grid layout showing event title, date, GPS coordinates, and live participant count.
+- **One-Click Actions**: Launch Live QR, view attendance, edit event, or delete session (with cascade).
+- **Auto-Refresh**: Dashboard data refreshes every 30 seconds via `router.refresh()`.
+- **Breadcrumb Navigation**: Admin → Events → Attendance hierarchy.
 
-### 4. User Experience
-- **Multilingual Support**: Fully localized interface supporting **English** and **Turkish**.
-- **Glassmorphism UI**: A premium, modern design with dark/light mode support and smooth animations via Framer Motion.
-- **Safari Optimized**: Purpose-built geolocation flow that satisfies strict mobile browser permissions.
+### 4. n8n Automation Integration
+- **Check-in Webhook**: Triggers on every participant check-in with full context (event, participant, status).
+- **Absence Reporting**: One-click "Sync Absences" marks all no-shows after a 24-hour window and pushes a report to your automation server.
+- **Non-Blocking**: All webhook calls are fire-and-forget — they never slow down the main check-in flow.
+
+### 5. User Experience
+- **Multilingual**: Fully localized interface supporting **English** and **Turkish** with a single-click toggle.
+- **Dark/Light Mode**: Premium glassmorphism UI with theme switching via `next-themes`.
+- **Smooth Animations**: Page transitions and micro-interactions powered by Framer Motion.
+- **Interactive Maps**: Leaflet.js map picker for setting event coordinates, with manual coordinate input fallback.
 
 ---
 
 ## 🚀 Tech Stack
-- **Framework**: Next.js 16 (App Router + Turbopack)
-- **Language**: TypeScript
-- **Database**: Neon (PostgreSQL)
-- **ORM**: Drizzle ORM
-- **Styling**: Tailwind CSS 4.0
-- **Animations**: Framer Motion
-- **Automation**: n8n Webhooks
+
+| Category | Technologies |
+|----------|-------------|
+| **Framework** | Next.js 16.2 (App Router + Turbopack), React 19, TypeScript 5 |
+| **Styling** | Tailwind CSS 4, Framer Motion 12, Lucide React icons |
+| **Database** | PostgreSQL via Neon Serverless, Drizzle ORM 0.45 |
+| **Auth** | JWT (`jsonwebtoken` + `jose`), bcrypt password hashing, HttpOnly cookies |
+| **QR System** | `qrcode.react` (SVG generation), `html5-qrcode` (camera scanning) |
+| **Geolocation** | `geolib` (Haversine distance), Leaflet + React-Leaflet (map UI) |
+| **File Processing** | `xlsx` (Excel/CSV parse & export) |
+| **Automation** | n8n webhook integration |
+| **Validation** | Zod 4 |
+
+---
+
+## 🗄️ Database Schema
+
+```
+┌─────────────┐       ┌─────────────────┐
+│    Users     │       │     Events      │
+├─────────────┤       ├─────────────────┤
+│ id (UUID)   │       │ id (UUID)       │
+│ email       │       │ title           │
+│ password    │       │ description     │
+│ first_name  │       │ date            │
+│ last_name   │       │ latitude        │
+│ role        │       │ longitude       │
+│ created_at  │       │ radius (200m)   │
+│ updated_at  │       │ qr_secret       │
+└─────────────┘       │ created_at      │
+                      │ updated_at      │
+                      └────────┬────────┘
+                               │ 1:N
+                 ┌─────────────┴─────────────┐
+                 │                           │
+        ┌────────▼────────┐        ┌─────────▼────────┐
+        │  Participants   │        │   Attendance     │
+        ├─────────────────┤        ├──────────────────┤
+        │ id (UUID)       │◄───────│ participant_id   │
+        │ event_id (FK)   │        │ event_id (FK)    │
+        │ email           │        │ timestamp (null) │
+        │ name            │        │ latitude         │
+        │ surname         │        │ longitude        │
+        │ phone           │        │ status (ENUM)    │
+        │ is_registered   │        └──────────────────┘
+        │ created_at      │
+        └─────────────────┘
+        UNIQUE(event_id, email)
+
+Status ENUM: VALID | INVALID_LOCATION | EXPIRED_QR | ABSENT | EXTRA
+```
+
+---
+
+## 🔄 Check-in Flow
+
+```
+Participant scans QR
+        │
+        ▼
+  validateScanAction()
+  ├─ JWT token verified (jose)
+  ├─ Event fetched from DB
+  └─ GPS distance checked (geolib)
+        │
+        ▼ (valid)
+  Session token issued (5min TTL)
+        │
+        ▼
+  lookupParticipantAction()
+  ├─ Email matched → auto check-in
+  └─ Email not found → inline registration form
+        │
+        ▼
+  checkInAction()
+  ├─ Participant resolved or created
+  ├─ Attendance record inserted
+  └─ n8n webhook triggered (non-blocking)
+        │
+        ▼
+  ✅ Access Granted
+```
 
 ---
 
@@ -49,6 +136,8 @@ To access the management dashboard, use the following credentials:
 
 1. **Clone and Install**:
 ```bash
+git clone <repo-url>
+cd task
 npm install
 ```
 
@@ -57,7 +146,7 @@ Create a `.env` file in the root:
 ```env
 DATABASE_URL="your_neon_postgres_url"
 JWT_SECRET="your_secure_secret"
-N8N_WEBHOOK_URL="http://localhost:5678/webhook/..."
+N8N_WEBHOOK_URL="http://localhost:5678/webhook/..."  # Optional
 ```
 
 3. **Database Setup**:
@@ -70,12 +159,76 @@ npm run seed
 ```bash
 npm run dev
 ```
+The app starts at `http://localhost:3000`.
 
 ---
 
-## 📁 Core Directory Map
-- `src/app/admin`: Management portal and authentication.
-- `src/app/scan`: The "Live" participant check-in portal.
-- `src/app/admin/event/[id]/qr`: The rotating QR projection page.
-- `src/lib/automation.ts`: Webhook trigger logic for n8n.
-- `src/lib/translations.ts`: Central i18n configuration.
+## 📁 Project Structure
+
+```
+src/
+├── actions/                    # Next.js Server Actions (API-less backend)
+│   ├── auth.ts                 # Login (bcrypt), logout, session management
+│   ├── attendance.ts           # QR validation, check-in, absence sync
+│   ├── event.ts                # Event CRUD (create, update, delete)
+│   ├── participants.ts         # Participant CRUD + bulk import
+│   └── qr.ts                  # JWT-signed QR token generation (90s TTL)
+│
+├── app/                        # Next.js App Router pages
+│   ├── page.tsx                # Landing page + auth portal
+│   ├── scan/                   # Participant check-in scanner
+│   ├── admin/
+│   │   ├── dashboard/          # Admin session management grid
+│   │   └── event/[eventId]/
+│   │       ├── attendance/     # Participant list + bulk upload
+│   │       ├── edit/           # Event edit form
+│   │       └── qr/             # Live rotating QR projection
+│   └── globals.css             # Design tokens (light/dark theme)
+│
+├── components/                 # React components
+│   ├── Scanner.tsx             # QR scanner + geolocation + registration flow
+│   ├── AttendanceList.tsx      # Searchable attendance table with status badges
+│   ├── AdminDashboardContent.tsx  # Event cards grid with actions
+│   ├── ParticipantUpload.tsx   # Excel/CSV drag-and-drop uploader
+│   ├── ManualParticipantModal.tsx  # Add/edit participant modal
+│   ├── EventForm.tsx           # Event create/edit form with map picker
+│   ├── LocationPicker.tsx      # Leaflet interactive map component
+│   ├── SyncAbsencesTrigger.tsx # 24-hour absence sync button
+│   ├── AuthTabContent.tsx      # Login form component
+│   ├── LanguageContext.tsx      # i18n context provider (EN/TR)
+│   ├── LanguageToggle.tsx      # Language switching button
+│   ├── ThemeProvider.tsx       # next-themes wrapper
+│   └── ThemeToggle.tsx         # Dark/light mode toggle
+│
+├── db/
+│   ├── schema.ts               # Drizzle ORM schema (4 tables + relations)
+│   ├── index.ts                # Neon serverless DB connection
+│   └── seed.ts                 # Default admin + sample event seeder
+│
+└── lib/
+    ├── auth.ts                 # JWT secret helpers
+    ├── automation.ts           # n8n webhook trigger (non-blocking)
+    └── translations.ts         # Full EN/TR translation dictionary
+```
+
+---
+
+## 🔐 Security
+
+- **Password Hashing**: bcrypt with 10 salt rounds
+- **JWT Tokens**: HMAC-SHA256 signed, time-limited (QR: 90s, Session: 5min, Admin: 24h)
+- **HttpOnly Cookies**: Session tokens stored as httpOnly cookies (no JS access)
+- **GPS Verification**: Haversine-based distance check with configurable radius
+- **QR Rotation**: Codes auto-expire every 90 seconds — screenshot sharing is useless
+- **Cascade Deletes**: Removing an event cleans up all related participants and attendance records
+- **HTTPS Enforcement**: Geolocation API blocked on insecure contexts (with `isSecureContext` check)
+
+---
+
+## 🌍 Internationalization
+
+Full bilingual support with custom translation system:
+- 🇬🇧 **English** — Default
+- 🇹🇷 **Türkçe** — Complete translation
+
+All UI labels, error messages, toast notifications, and form placeholders are translated. Language preference persisted via `localStorage`.
