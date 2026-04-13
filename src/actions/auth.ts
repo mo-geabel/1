@@ -23,7 +23,8 @@ export async function loginAction(formData: FormData) {
       eq(users.email, email)
     ).limit(1);
 
-    // SECURITY WARNING: In production, passwords MUST be hashed.
+    // The password should be hashed with bycrpt it will be done in the production mode
+    // other reason we wont create users from the website we need to edit the seeded password for the admin to be hashed then to compare it will be done after the demo 
     if (!user || user.password !== password) {
       return { error: 'Invalid email or password.' };
     }
